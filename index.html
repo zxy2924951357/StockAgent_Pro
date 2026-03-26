@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>EasyQuant - 专业量化终端</title>
+    <style>
+        :root { --bg: #000000; --panel: #0d0e12; --border: #1f2128; --text: #d1d5db; --text-muted: #6b7280; --up: #f03c50; --down: #1ebd60; --active: #2563eb; --hover: #1c1d22; }
+        body { font-family: "Microsoft YaHei", -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        * { box-sizing: border-box; }
+        button { cursor: pointer; border: none; outline: none; font-family: inherit; }
+        input, select { font-family: inherit; outline: none; }
+
+        .topbar { height: 60px; background: var(--panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; z-index: 200; flex-shrink: 0;}
+        .logo { font-size: 18px; font-weight: bold; color: #fff; display: flex; align-items: center; gap: 10px; width: 220px; }
+
+        .global-search-container { position: relative; flex: 1; max-width: 600px; margin: 0 auto; display: flex; align-items: center; }
+        .global-search-box { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 10px 15px 10px 40px; border-radius: 6px; font-size: 14px; transition: border-color 0.2s; }
+        .global-search-box:focus { border-color: var(--active); box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
+        .search-icon { position: absolute; left: 12px; color: var(--text-muted); font-size: 16px; }
+        .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--panel); border: 1px solid #333; border-top: none; border-radius: 0 0 6px 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); max-height: 300px; overflow-y: auto; display: none; z-index: 1000; margin-top: 4px; }
+        .search-item { padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s; }
+        .search-item:hover { background: var(--active); color: #fff; }
+        .search-item-code { font-family: Consolas, monospace; color: var(--text-muted); font-size: 12px; }
+
+        .top-ticker-data { display: flex; gap: 30px; margin-left: auto; font-size: 13px; align-items: baseline;}
+        .top-time { margin-left: 30px; color: var(--text-muted); font-size: 12px; font-family: Consolas; }
+
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+
+        .sidebar { width: 70px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding-top: 15px; z-index: 100; flex-shrink: 0;}
+        .nav-item { width: 100%; padding: 15px 0; display: flex; flex-direction: column; align-items: center; cursor: pointer; color: var(--text-muted); transition: 0.2s; border-left: 3px solid transparent; font-size: 12px; gap: 6px; margin-bottom: 5px;}
+        .nav-item:hover { color: #fff; background: var(--hover); }
+        .nav-item.active { color: var(--active); border-left-color: var(--active); background: #000; font-weight: bold; }
+        .nav-icon { font-size: 20px; }
+
+        .center-pane { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; background: var(--bg); }
+        .page-view { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+        .page-view.active { display: flex; }
+
+        .view-header { padding: 15px 25px; background: var(--panel); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;}
+        .view-title { font-size: 16px; font-weight: bold; color: #fff; margin: 0; }
+
+        .table-wrap { flex: 1; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: right; }
+        th { color: var(--text-muted); font-weight: normal; padding: 12px 20px; border-bottom: 1px solid var(--border); font-size: 13px; position: sticky; top: 0; background: var(--panel); z-index: 5; }
+        td { padding: 12px 20px; border-bottom: 1px solid #14151a; font-size: 14px; font-family: Consolas, monospace; transition: background-color 0.3s; vertical-align: middle; }
+        tr:hover td { background: var(--hover); cursor: pointer; }
+        .stock-name { font-weight: bold; color: #fff; text-align: left; cursor: pointer; }
+        .stock-name:hover { color: var(--active); text-decoration: underline; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; min-width: 60px; text-align: center; color: #fff; font-size: 13px;}
+        .bg-up { background: var(--up); } .bg-down { background: var(--down); }
+        .text-up { color: var(--up); } .text-down { color: var(--down); }
+
+        @keyframes flash-up { 0% { background-color: rgba(240, 60, 80, 0.3); } 100% { background-color: transparent; } }
+        @keyframes flash-down { 0% { background-color: rgba(30, 189, 96, 0.3); } 100% { background-color: transparent; } }
+        .flash-up { animation: flash-up 0.8s ease-out; }
+        .flash-down { animation: flash-down 0.8s ease-out; }
+
+        .hotspot-container { flex: 1; overflow-y: auto; }
+        .hotspot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding: 25px; }
+        .hotspot-card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 15px; transition: transform 0.2s; }
+        .hotspot-card:hover { transform: translateY(-2px); border-color: #444; }
+        .hc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+        .hc-name { font-size: 16px; font-weight: bold; color: #fff; }
+        .hc-leader { font-size: 13px; color: #94a3b8; background: #000; padding: 10px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;}
+
+        .right-pane { width: 400px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; z-index: 50; flex-shrink: 0;}
+        .pane-header { padding: 15px 20px; background: #000; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;}
+        .pane-title { font-weight: bold; color: #fff; font-size: 14px; display: flex; align-items: center; gap: 8px;}
+
+        .chat-history { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; background: var(--bg); }
+        .chat-msg { max-width: 95%; line-height: 1.6; font-size: 13px; padding: 12px 16px; border-radius: 6px; word-wrap: break-word; white-space: pre-wrap; }
+        .user-msg { background: var(--active); color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .agent-msg { background: var(--panel); color: var(--text); align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid #333; width: 100%;}
+
+        .agent-msg h2, .agent-msg h3 { margin-top: 10px; margin-bottom: 8px; color: #fff; border-bottom: 1px solid #333; padding-bottom: 4px; font-size: 15px;}
+        .agent-msg blockquote { border-left: 3px solid var(--active); margin: 8px 0; padding-left: 10px; color: var(--text-muted); background: #000; padding: 8px; }
+        .agent-msg table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px;}
+        .agent-msg th, .agent-msg td { border: 1px solid #333; padding: 6px; text-align: left; }
+
+        .chat-input-area { padding: 15px; background: var(--panel); border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;}
+        .chat-input-area textarea { width: 100%; height: 60px; background: #000; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 4px; resize: none; font-size: 13px;}
+        .chat-input-area textarea:focus { border-color: var(--active); }
+        .chat-tools { display: flex; justify-content: flex-end; }
+        .chat-tools button { background: var(--active); color: #fff; padding: 6px 16px; border-radius: 4px; font-weight: bold; font-size: 13px;}
+        .chat-tools button:hover { background: #1d4ed8; }
+        .chat-tools button:disabled { background: #4b5563; cursor: not-allowed; }
+
+        /* ================= 个股全景驾驶舱 ================= */
+        #view-dashboard { flex-direction: column; height: 100%; background: var(--bg); display: none;}
+        #view-dashboard.active { display: flex; }
+
+        .dash-header { padding: 15px 25px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;}
+        .dash-stock-info { display: flex; align-items: baseline; gap: 15px;}
+        .dash-name { font-size: 22px; font-weight: bold; color: #fff; margin: 0;}
+        .dash-code { font-size: 14px; color: var(--text-muted); font-family: Consolas;}
+        .dash-price-group { display: flex; align-items: baseline; gap: 12px;}
+        .dash-price { font-size: 24px; font-weight: bold; font-family: Consolas; }
+        .dash-pct { font-size: 15px; font-weight: bold; }
+
+        .dash-toolbar { background: var(--panel); border-top: 1px solid #1c1d22; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; padding: 0 25px; flex-shrink: 0;}
+        .dash-tabs { display: flex; gap: 25px; }
+        .dash-tab { padding: 15px 0; color: var(--text-muted); cursor: pointer; font-size: 14px; font-weight: bold; border-bottom: 2px solid transparent; transition: 0.2s;}
+        .dash-tab:hover { color: #fff; }
+        .dash-tab.active { color: var(--active); border-bottom-color: var(--active); }
+
+        .dash-actions { display: flex; gap: 8px; align-items: center; position: relative;}
+        .dash-btn { padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 12px; display: flex; align-items: center; gap: 4px; transition: 0.2s;}
+        .btn-ai { background: rgba(37,99,235,0.15); color: #3b82f6; }
+        .btn-ai:hover { background: rgba(37,99,235,0.3); }
+        .btn-trade { background: rgba(30,189,96,0.15); color: #1ebd60; }
+        .btn-trade:hover { background: rgba(30,189,96,0.3); }
+        .btn-risk { background: rgba(240,60,80,0.15); color: #f03c50; }
+        .btn-risk:hover { background: rgba(240,60,80,0.3); }
+        .btn-watch { background: transparent; color: var(--text-muted); border: 1px solid #333; }
+        .btn-watch:hover { color: #fff; border-color: #666; }
+
+        /* 悬浮建仓弹窗 */
+        .trade-panel { position: absolute; top: 100%; right: 0; margin-top: 8px; background: var(--panel); border: 1px solid #333; border-radius: 6px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.9); z-index: 200; display: none; width: 320px;}
+        .trade-panel.open { display: block; animation: slideDown 0.2s ease; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .trade-inputs { display: flex; flex-direction: column; gap: 12px; margin-top: 15px;}
+        .trade-inputs input { background: #000; border: 1px solid #333; color: #fff; padding: 8px 12px; border-radius: 4px; font-family: Consolas; font-size:13px; width: 100%;}
+
+        /* 固定画板区 */
+        .dash-body { flex: 1; position: relative; display: flex; flex-direction: column; overflow: hidden; background: #0a0a0c;}
+        .dash-tab-content { display: none; flex: 1; flex-direction: column; width: 100%; height: 100%; padding: 20px;}
+        .dash-tab-content.active { display: flex; }
+
+        .chart-container { flex: 1; width: 100%; position: relative; border: 1px solid var(--border); border-radius: 6px; background: var(--panel);}
+
+        .bt-controls { display: flex; gap: 15px; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #1c1d22;}
+        .bt-controls select { background: #000; border: 1px solid #333; color: #facc15; padding: 6px 10px; border-radius: 4px; width: 280px; font-size: 13px;}
+        .bt-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px;}
+        .bt-kpi-card { background: var(--panel); border: 1px solid #1c1d22; border-radius: 4px; padding: 10px; text-align: center;}
+        .bt-kpi-title { font-size: 12px; color: var(--text-muted); margin-bottom: 5px;}
+        .bt-kpi-value { font-size: 18px; font-weight: bold; font-family: Consolas;}
+        .bt-chart-box { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; position: relative; min-height: 0;}
+
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+</head>
+<body>
+    <div class="topbar">
+        <div class="logo"><span style="color:var(--active); font-size: 22px;">◬</span> EasyQuant Pro</div>
+        <div class="global-search-container">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="global-search-box" id="global-search-input" placeholder="全局搜索代码 / 首字母 / 名称，回车直达全景驾驶舱..." autocomplete="off">
+            <div id="global-search-dropdown" class="search-dropdown"></div>
+        </div>
+        <div class="top-ticker-data" id="top-ticker-data">⏳ 数据连线中...</div>
+        <div class="top-time" id="last-update-time">--:--:--</div>
+    </div>
+
+    <div class="main-container">
+
+        <div class="sidebar">
+            <div class="nav-item active" id="nav-watchlist" onclick="switchTab('watchlist')"><span class="nav-icon">📈</span><span>盯盘</span></div>
+            <div class="nav-item" id="nav-portfolio" onclick="switchTab('portfolio')"><span class="nav-icon">💼</span><span>持仓</span></div>
+            <div class="nav-item" id="nav-hotspots" onclick="switchTab('hotspots')"><span class="nav-icon">🔥</span><span>热点</span></div>
+        </div>
+
+        <div class="center-pane">
+
+            <div id="view-watchlist" class="page-view active">
+                <div class="view-header"><h2 class="view-title">我的自选池</h2></div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th style="text-align: left;">标的</th><th style="width: 100px; text-align: left;">形态</th><th>最新价</th><th>涨跌幅</th><th>成交量</th><th>换手率</th></tr></thead>
+                        <tbody id="table-body"><tr><td colspan="6" style="text-align:center; padding: 50px; color:#666;">暂无自选，请在顶部全局搜索添加</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-portfolio" class="page-view">
+                <div class="view-header"><h2 class="view-title">实盘/模拟持仓监控</h2></div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th style="text-align: left;">持仓标的</th><th>数量</th><th>成本价</th><th>现价</th><th>浮动盈亏</th><th>盈亏比</th></tr></thead>
+                        <tbody id="portfolio-body"><tr><td colspan="6" style="text-align:center; padding: 50px; color:#666;">暂无持仓</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-hotspots" class="page-view">
+                <div class="view-header"><h2 class="view-title">全市场资金风向标</h2></div>
+                <div class="hotspot-container"><div class="hotspot-grid" id="hotspot-grid"></div></div>
+            </div>
+
+            <div id="view-dashboard" class="page-view">
+                <div class="dash-header">
+                    <div class="dash-stock-info">
+                        <h1 class="dash-name" id="dash-name">--</h1>
+                        <span class="dash-code" id="dash-code">--</span>
+                    </div>
+                    <div class="dash-price-group">
+                        <span class="dash-price" id="dash-price">0.00</span>
+                        <span class="dash-pct badge" id="dash-pct" style="background:#333;">0.00%</span>
+                        <div style="margin-left: 15px; color: var(--text-muted); font-size: 12px; display: flex; flex-direction: column; gap: 4px;">
+                            <span>量比: <b id="dash-vol-ratio" style="color:#fff;">--</b></span>
+                            <span>换手: <b id="dash-turnover" style="color:#fff;">--%</b></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dash-toolbar">
+                    <div class="dash-tabs">
+                        <div class="dash-tab active" id="dash-tab-btn-kline" onclick="switchDashTab('kline')">📊 K线盘面</div>
+                        <div class="dash-tab" id="dash-tab-btn-backtest" onclick="switchDashTab('backtest')">🧪 量化回测引擎</div>
+                    </div>
+                    <div class="dash-actions">
+                        <button class="dash-btn btn-ai" onclick="dashTriggerAI()">🤖 智能诊断</button>
+                        <button class="dash-btn btn-risk" onclick="dashTriggerCRO()">🛡️ CRO风控</button>
+                        <button class="dash-btn btn-watch" id="dash-btn-watch" onclick="dashToggleWatchlist()">☆ 自选</button>
+                        <button class="dash-btn btn-trade" onclick="toggleTradePanel()">⚖️ 模拟建仓 ▼</button>
+
+                        <div class="trade-panel" id="trade-panel">
+                            <b style="color: #fff; font-size: 14px;">录入买入成本</b>
+                            <div class="trade-inputs">
+                                <input type="number" id="dash-trade-price" placeholder="买入均价" step="0.01">
+                                <input type="number" id="dash-trade-vol" placeholder="数量(股)" step="100">
+                                <button class="dash-btn btn-trade" style="padding: 8px 15px; width: 100%; justify-content:center;" onclick="dashSubmitTrade()">确认建仓入库</button>
+                                <div id="dash-trade-msg" style="font-size: 12px; text-align:center; height:16px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dash-body">
+                    <div id="dash-tab-kline" class="dash-tab-content active">
+                        <div class="chart-container">
+                            <div id="dash-kline-chart" style="width: 100%; height: 100%;"></div>
+                            <div id="dash-kline-loading" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:var(--text-muted);">正在加载最新盘口...</div>
+                        </div>
+                    </div>
+                    <div id="dash-tab-backtest" class="dash-tab-content">
+                        <div class="bt-controls">
+                            <select id="dash-bt-strategy">
+                                <option value="ma_cross">📈 顺势突破：双均线交叉 (MA5穿MA20)</option>
+                                <option value="macd_trend">🌊 动能跟随：MACD波段跟随 (DIF金叉)</option>
+                                <option value="rsi_reversion">⚖️ 均值回复：RSI超卖反弹 (跌破30抄底)</option>
+                            </select>
+                            <button class="dash-btn btn-trade" style="background:#facc15; color:#000; border:none; padding: 6px 15px;" onclick="dashRunBacktest()">▶ 开始模拟</button>
+                        </div>
+                        <div class="bt-kpi-grid">
+                            <div class="bt-kpi-card"><div class="bt-kpi-title">策略净收益</div><div class="bt-kpi-value" id="dash-kpi-strat">--%</div></div>
+                            <div class="bt-kpi-card"><div class="bt-kpi-title">个股自然收益</div><div class="bt-kpi-value" id="dash-kpi-stock">--%</div></div>
+                            <div class="bt-kpi-card"><div class="bt-kpi-title">交易胜率</div><div class="bt-kpi-value" id="dash-kpi-win" style="color:var(--text-muted);">--%</div></div>
+                            <div class="bt-kpi-card"><div class="bt-kpi-title">最大回撤</div><div class="bt-kpi-value" id="dash-kpi-drawdown" style="color:var(--up);">--%</div></div>
+                        </div>
+                        <div class="bt-chart-box">
+                            <div id="dash-bt-chart" style="width: 100%; height: 100%;"></div>
+                            <div id="dash-bt-placeholder" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:var(--text-muted);">请点击“开始模拟”运行策略</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-pane">
+            <div class="pane-header">
+                <div class="pane-title"><span>🤖</span> Agent Copilot 分析终端</div>
+                <button style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px;" onclick="clearChat()">🗑️ 清空面板</button>
+            </div>
+
+            <div class="chat-history" id="chat-history">
+                <div class="chat-msg agent-msg">
+                    <b style="color:var(--active);">系统已就绪。</b><br><br>
+                    左侧视窗用于操作与数据监控，此面板为您专属的智能投顾专区。<br>
+                    - 顶部搜索进入股票界面。<br>
+                    - 点击工具栏【智能诊断】或【风控】，我会实时调取底层图表数据为您推演。<br>
+                    - 您也可以直接在下方提问（如：<b>给我推荐两只股票</b>）。
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <textarea id="chat-input" placeholder="输入你想咨询的股票或逻辑 (Ctrl+Enter 发送)..." onkeydown="if(event.ctrlKey && event.keyCode==13) sendChatMessage()"></textarea>
+                <div class="chat-tools"><button id="send-btn" onclick="sendChatMessage()">交 互</button></div>
+            </div>
+        </div>
+
+    </div>
+
+<script>
+    const API_BASE = "http://127.0.0.1:8000/api";
+    let watchlist = [], portfolioList = [];
+    let currentTab = 'watchlist';
+    let dashCurrentCode = '', dashCurrentName = '';
+    let globalSearchTimer = null;
+    let dashKlineChart = null, dashBtChart = null;
+
+    // 🌟 K线内存缓存池 (有效期 5 分钟)
+    const KLINE_CACHE_TTL = 5 * 60 * 1000;
+    let dashDataCache = {};
+
+    function updateTimeStatus() { document.getElementById('last-update-time').innerText = new Date().toLocaleTimeString('zh-CN', { hour12: false }); }
+    setInterval(updateTimeStatus, 1000); updateTimeStatus();
+
+    // ================== AI 逻辑 ==================
+    function clearChat() { document.getElementById('chat-history').innerHTML = '<div class="chat-msg agent-msg" style="color:#666;">面板已清空。</div>'; }
+
+    function appendMessage(role, text) {
+        const historyEl = document.getElementById('chat-history');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `chat-msg ${role}-msg`;
+        if (role === 'agent' && typeof marked !== 'undefined') msgDiv.innerHTML = marked.parse(text);
+        else msgDiv.innerText = text;
+        historyEl.appendChild(msgDiv); historyEl.scrollTop = historyEl.scrollHeight;
+        return msgDiv;
+    }
+
+    async function sendChatMessage(presetText = null, isSilent = false) {
+        const inputEl = document.getElementById('chat-input');
+        const text = presetText || inputEl.value.trim();
+        if (!text) return;
+        if (!isSilent) appendMessage('user', text);
+        if (!presetText) inputEl.value = '';
+
+        const btn = document.getElementById('send-btn');
+        btn.disabled = true; btn.innerText = '思考中...';
+        const msgEl = appendMessage('agent', '🔎 正在接通数据网关...');
+        const historyEl = document.getElementById('chat-history');
+        let accumulatedText = "";
+
+        try {
+            const res = await fetch(`${API_BASE}/chat`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ query: text }) });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const reader = res.body.getReader(); const decoder = new TextDecoder('utf-8');
+            msgEl.innerText = "";
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunkString = decoder.decode(value, { stream: true });
+                const lines = chunkString.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const dataStr = line.slice(6).trim();
+                        if (!dataStr) continue;
+                        try {
+                            const parsedData = JSON.parse(dataStr);
+                            if (parsedData.type === 'text') { accumulatedText += parsedData.content; msgEl.innerText = accumulatedText; }
+                            else if (parsedData.type === 'progress') { accumulatedText += parsedData.content + "\n"; msgEl.innerText = accumulatedText; }
+                            else if (parsedData.type === 'backtest') { accumulatedText += "\n" + parsedData.content + "\n"; msgEl.innerText = accumulatedText; }
+                            else if (parsedData.type === 'final_report') { accumulatedText = parsedData.content; msgEl.innerHTML = marked.parse(accumulatedText); }
+                            else if (parsedData.type === 'error') { msgEl.innerText += "\n\n⚠️ " + parsedData.content; msgEl.style.color = '#f03c50'; }
+                        } catch(e) {}
+                    }
+                }
+                historyEl.scrollTop = historyEl.scrollHeight;
+            }
+            if (accumulatedText && !accumulatedText.includes('🟢 [')) msgEl.innerHTML = marked.parse(accumulatedText);
+        } catch (e) { msgEl.innerText = `⚠️ 网络连接中断。`; msgEl.style.color = '#f03c50'; }
+        finally { btn.disabled = false; btn.innerText = '交 互'; historyEl.scrollTop = historyEl.scrollHeight; }
+    }
+
+    function triggerAI(ts_code, name) {
+        const prompt = `请帮我生成一份关于【${name}】(${ts_code}) 的深度诊断研报。`;
+        appendMessage('user', prompt); sendChatMessage(prompt, true);
+    }
+    function dashTriggerAI() {
+        if(!dashCurrentCode) return;
+        appendMessage('agent', `📊 **接收指令**：对当前视窗内标的【${dashCurrentName}】进行全息扫描...`);
+        triggerAI(dashCurrentCode, dashCurrentName);
+    }
+    function dashTriggerCRO() {
+        if(!dashCurrentCode) return;
+        const prompt = `请作为我的专属风控总监，帮我进行持仓诊断。分析我当前持有的【${dashCurrentName}】(${dashCurrentCode}) 是否需要平仓或加仓。`;
+        appendMessage('user', prompt);
+        appendMessage('agent', `🛡️ **调用风控中枢**：调取机密持仓成本线与实时价对比模型...`);
+        sendChatMessage(prompt, true);
+    }
+
+    // ================== 全局搜索 ==================
+    const globalSearchInput = document.getElementById('global-search-input');
+    const globalSearchDropdown = document.getElementById('global-search-dropdown');
+
+    globalSearchInput.addEventListener('input', (e) => {
+        const keyword = e.target.value.trim();
+        if (!keyword) { globalSearchDropdown.style.display = 'none'; return; }
+        clearTimeout(globalSearchTimer);
+        globalSearchTimer = setTimeout(async () => {
+            try {
+                const res = await fetch(`${API_BASE}/market/search?keyword=${encodeURIComponent(keyword)}`).then(r => r.json());
+                if (res.code === 200 && res.data.length > 0) {
+                    globalSearchDropdown.innerHTML = res.data.map(s => `
+                        <div class="search-item" onmousedown="openDashboard('${s.ts_code}', '${s.name}')">
+                            <span>${s.name}</span><span class="search-item-code">${s.ts_code}</span>
+                        </div>
+                    `).join('');
+                    globalSearchDropdown.style.display = 'block';
+                } else {
+                    globalSearchDropdown.innerHTML = `<div style="padding:15px; color:#666; font-size:13px;">未找到标的</div>`;
+                    globalSearchDropdown.style.display = 'block';
+                }
+            } catch(e) {}
+        }, 300);
+    });
+    globalSearchInput.addEventListener('blur', () => { setTimeout(()=> globalSearchDropdown.style.display = 'none', 150); });
+
+    // ================== 选项卡与画板 ==================
+    function switchDashTab(tabId) {
+        document.querySelectorAll('.dash-tab').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.dash-tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById(`dash-tab-btn-${tabId}`).classList.add('active');
+        document.getElementById(`dash-tab-${tabId}`).classList.add('active');
+
+        setTimeout(() => {
+            if (tabId === 'kline' && dashKlineChart) dashKlineChart.resize();
+            if (tabId === 'backtest' && dashBtChart) dashBtChart.resize();
+        }, 10);
+    }
+
+    function openDashboard(ts_code, name) {
+        dashCurrentCode = ts_code; dashCurrentName = name;
+        globalSearchInput.value = ''; globalSearchDropdown.style.display = 'none';
+
+        document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
+        document.getElementById('view-dashboard').classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        switchDashTab('kline');
+
+        document.getElementById('dash-name').innerText = name;
+        document.getElementById('dash-code').innerText = ts_code;
+        document.getElementById('dash-price').innerText = '0.00';
+        document.getElementById('dash-pct').innerText = '0.00%';
+
+        const isWatched = watchlist.some(s => s.ts_code === ts_code);
+        const watchBtn = document.getElementById('dash-btn-watch');
+        watchBtn.innerHTML = isWatched ? '★ 已关注' : '☆ 自选';
+        watchBtn.style.color = isWatched ? '#facc15' : 'var(--text-muted)';
+        watchBtn.style.borderColor = isWatched ? '#facc15' : '#333';
+
+        document.getElementById('trade-panel').classList.remove('open');
+        document.getElementById('dash-trade-msg').innerText = '';
+
+        if(dashBtChart) { dashBtChart.dispose(); dashBtChart = null;}
+        document.getElementById('dash-bt-placeholder').style.display = 'block';
+
+        fetchDashRealtime();
+        renderDashKline(); // 🌟 这里会走缓存逻辑
+    }
+
+    async function fetchDashRealtime() {
+        if(!dashCurrentCode) return;
+        try {
+            const res = await fetch(`${API_BASE}/market/realtime`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify([dashCurrentCode]) }).then(r => r.json());
+            if (res.code === 200 && res.data.length > 0) {
+                const item = res.data[0];
+                document.getElementById('dash-price').innerText = item.price.toFixed(2);
+                document.getElementById('dash-price').className = `dash-price ${item.change_pct >= 0 ? 'text-up' : 'text-down'}`;
+                document.getElementById('dash-pct').innerText = `${item.change_pct > 0 ? '+' : ''}${item.change_pct.toFixed(2)}%`;
+                document.getElementById('dash-pct').className = `dash-pct badge ${item.change_pct >= 0 ? 'bg-up' : 'bg-down'}`;
+                document.getElementById('dash-vol-ratio').innerText = item.volume_ratio ? item.volume_ratio.toFixed(2) : '--';
+                document.getElementById('dash-turnover').innerText = item.turnover ? item.turnover.toFixed(2) : '--';
+                document.getElementById('dash-trade-price').value = item.price.toFixed(2);
+            }
+        } catch(e){}
+    }
+
+    // 🌟 K线极速缓存渲染逻辑
+    async function renderDashKline() {
+        if(!dashCurrentCode) return;
+        const now = Date.now();
+
+        // 缓存命中判断
+        if (dashDataCache[dashCurrentCode] && (now - dashDataCache[dashCurrentCode].timestamp < KLINE_CACHE_TTL)) {
+            document.getElementById('dash-kline-loading').style.display = 'none';
+            drawKlineChart(dashDataCache[dashCurrentCode].data);
+            return;
+        }
+
+        try {
+            document.getElementById('dash-kline-loading').style.display = 'block';
+            const res = await fetch(`${API_BASE}/market/kline?ts_code=${dashCurrentCode}&limit=120`).then(r => r.json());
+            document.getElementById('dash-kline-loading').style.display = 'none';
+
+            if (res.code === 200 && res.data.length > 0) {
+                dashDataCache[dashCurrentCode] = { timestamp: now, data: res.data };
+                drawKlineChart(res.data);
+            } else {
+                document.getElementById('dash-kline-loading').style.display = 'block';
+                document.getElementById('dash-kline-loading').innerText = '暂无K线数据';
+            }
+        } catch(e) {
+            document.getElementById('dash-kline-loading').style.display = 'block';
+            document.getElementById('dash-kline-loading').innerText = '加载失败';
+        }
+    }
+
+    // 提取画图逻辑
+    function drawKlineChart(data) {
+        const chartDom = document.getElementById('dash-kline-chart');
+        if(dashKlineChart) { dashKlineChart.dispose(); }
+        dashKlineChart = echarts.init(chartDom);
+
+        const categoryData = data.map(item => item.date.slice(5));
+        const values = data.map(item => [item.open, item.close, item.low, item.high]);
+        const volumes = data.map((item, index) => [index, item.volume, item.open > item.close ? -1 : 1]);
+
+        dashKlineChart.setOption({
+            backgroundColor: 'transparent', tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+            grid: [{ left: '2%', right: '2%', top: '2%', height: '70%' }, { left: '2%', right: '2%', top: '78%', height: '20%' }],
+            xAxis: [{ type: 'category', data: categoryData, boundaryGap: false, axisLabel: { show: false } }, { type: 'category', gridIndex: 1, data: categoryData, axisLabel: { color: '#666', fontSize: 10 } }],
+            yAxis: [{ scale: true, position: 'right', splitLine: { lineStyle: { color: '#1c1d22' } }, axisLabel: { color: '#666', fontSize: 10 } }, { gridIndex: 1, splitNumber: 2, axisLabel: { show: false }, splitLine: { show: false } }],
+            dataZoom: [ { type: 'inside', xAxisIndex: [0, 1], start: 40, end: 100 } ],
+            series: [
+                { name: 'K线', type: 'candlestick', data: values, itemStyle: { color: '#f03c50', color0: '#1ebd60', borderColor: '#f03c50', borderColor0: '#1ebd60' } },
+                { name: '成交量', type: 'bar', xAxisIndex: 1, yAxisIndex: 1, data: volumes, itemStyle: { color: function(p) { return p.data[2] === 1 ? '#f03c50' : '#1ebd60'; } } }
+            ]
+        });
+    }
+
+    function toggleTradePanel() { document.getElementById('trade-panel').classList.toggle('open'); }
+
+    async function dashToggleWatchlist() {
+        if(!dashCurrentCode) return;
+        const isWatched = watchlist.some(s => s.ts_code === dashCurrentCode);
+        if (isWatched) { await fetch(`${API_BASE}/market/watchlist/remove?ts_code=${dashCurrentCode}`, {method: 'DELETE'}); }
+        else { await fetch(`${API_BASE}/market/watchlist/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ts_code: dashCurrentCode, stock_name: dashCurrentName}) }); }
+        await loadWatchlist(); openDashboard(dashCurrentCode, dashCurrentName);
+    }
+
+    async function dashSubmitTrade() {
+        const buy_price = parseFloat(document.getElementById('dash-trade-price').value);
+        const volume = parseInt(document.getElementById('dash-trade-vol').value);
+        const msgEl = document.getElementById('dash-trade-msg');
+        if (!buy_price || !volume || buy_price <= 0 || volume <= 0) { msgEl.innerText = "数据无效"; msgEl.style.color = '#f03c50'; return; }
+
+        msgEl.innerText = "提交中..."; msgEl.style.color = '#6b7280';
+        const res = await fetch(`${API_BASE}/portfolio/buy`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ts_code: dashCurrentCode, stock_name: dashCurrentName, buy_price, volume }) }).then(r => r.json());
+        if (res.code === 200) {
+            msgEl.innerText = "✔ 成功入库"; msgEl.style.color = 'var(--up)';
+            loadPortfolio(); setTimeout(()=> toggleTradePanel(), 1000);
+        } else { msgEl.innerText = `⚠️ ${res.msg}`; msgEl.style.color = '#f03c50'; }
+    }
+
+    async function dashRunBacktest() {
+        if(!dashCurrentCode) return;
+        const strategyValue = document.getElementById('dash-bt-strategy').value;
+        document.getElementById('dash-bt-placeholder').style.display = 'block';
+        document.getElementById('dash-bt-placeholder').innerText = '⚙️ 运行引擎中...';
+
+        try {
+            const res = await fetch(`${API_BASE}/backtest/run?ts_code=${dashCurrentCode}&strategy=${strategyValue}`).then(r => r.json());
+            if (res.code === 200 && res.data) {
+                document.getElementById('dash-bt-placeholder').style.display = 'none';
+                const kpi = res.data.kpi; const chartData = res.data.chart; const stratName = res.data.strategy_name;
+
+                const sPct = kpi.strategy_return_pct; const bPct = kpi.stock_return_pct;
+                document.getElementById('dash-kpi-strat').innerText = `${sPct > 0 ? '+' : ''}${sPct}%`; document.getElementById('dash-kpi-strat').style.color = sPct >= 0 ? '#f03c50' : '#1ebd60';
+                document.getElementById('dash-kpi-stock').innerText = `${bPct > 0 ? '+' : ''}${bPct}%`; document.getElementById('dash-kpi-stock').style.color = bPct >= 0 ? '#f03c50' : '#1ebd60';
+                document.getElementById('dash-kpi-win').innerText = `${kpi.win_rate}%`; document.getElementById('dash-kpi-drawdown').innerText = `${kpi.max_drawdown}%`;
+
+                const chartDom = document.getElementById('dash-bt-chart');
+                if(dashBtChart) dashBtChart.dispose();
+                dashBtChart = echarts.init(chartDom);
+                dashBtChart.setOption({
+                    backgroundColor: 'transparent', tooltip: { trigger: 'axis' }, legend: { data: ['策略净值', '个股基准'], textStyle: { color: '#9ca3af' } },
+                    grid: { left: '1%', right: '2%', bottom: '15%', top:'10%', containLabel: true },
+                    xAxis: { type: 'category', boundaryGap: false, data: chartData.dates, axisLabel: { color: '#6b7280' } },
+                    yAxis: { type: 'value', min: 'dataMin', position:'right', axisLabel: { color: '#6b7280' }, splitLine: { lineStyle: { color: '#1c1d22' } } },
+                    dataZoom: [{ type: 'inside', start: 0, end: 100 }],
+                    series: [
+                        { name: '策略净值', type: 'line', data: chartData.strategy_net, itemStyle: { color: '#facc15' }, lineStyle: { width: 2 }, showSymbol: false },
+                        { name: '个股基准', type: 'line', data: chartData.stock_net, itemStyle: { color: '#2563eb' }, lineStyle: { width: 2, type: 'dashed' }, showSymbol: false }
+                    ]
+                });
+
+                const aiPrompt = `请作为资深量化研究员，点评我对【${dashCurrentName}】运行的【${stratName}】回测结果。数据：策略收益${sPct}%，基准${bPct}%，胜率${kpi.win_rate}%，最大回撤${kpi.max_drawdown}%。`;
+                appendMessage('agent', `🧪 **回测完成：${stratName}**\n已投递数据至评估模型...`);
+                sendChatMessage(aiPrompt, true);
+
+            } else { document.getElementById('dash-bt-placeholder').innerText = `⚠️ ${res.msg}`; }
+        } catch(e) { document.getElementById('dash-bt-placeholder').innerText = `⚠️ 网络故障`; }
+    }
+
+    // ================== 左侧大栏与底层逻辑 ==================
+    function switchTab(tabId) {
+        currentTab = tabId;
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        document.getElementById(`nav-${tabId}`).classList.add('active');
+        document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
+        document.getElementById(`view-${tabId}`).classList.add('active');
+
+        if (tabId !== 'dashboard') { dashCurrentCode = ''; }
+        if(tabId === 'watchlist') { pollRealtime(); }
+        if(tabId === 'portfolio') { loadPortfolio(); }
+        if(tabId === 'hotspots') { fetchHotspots(); }
+    }
+
+    function drawTrend(id, prices, isUp) {
+        const container = document.getElementById(`spark-${id}`);
+        if (!container || !prices.length) return;
+        const color = isUp ? '#f03c50' : '#1ebd60';
+        const min = Math.min(...prices), max = Math.max(...prices), range = max - min || 1;
+        const points = prices.map((p, i) => `${(i / (prices.length - 1)) * 60},${24 - ((p - min) / range) * 20 - 2}`).join(' ');
+        container.innerHTML = `<svg width="60" height="24"><polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
+    }
+
+    async function fetchIndices() {
+        try {
+            const res = await fetch(`${API_BASE}/market/indices`).then(r => r.json());
+            if (res.code === 200 && res.data) {
+                document.getElementById('top-ticker-data').innerHTML = res.data.map(i => `<div style="display:flex; gap:6px; align-items:baseline;"><span style="color:var(--text-muted);">${i.name}</span><b class="${i.change_pct>=0?'text-up':'text-down'}" style="font-size:14px; font-family:Consolas;">${i.price.toFixed(2)}</b><span class="${i.change_pct>=0?'text-up':'text-down'}" style="font-weight:bold; font-size:12px;">${i.change_pct>0?'+':''}${i.change_pct.toFixed(2)}%</span></div>`).join('');
+            }
+        } catch(e) {}
+    }
+
+    async function loadWatchlist() {
+        try {
+            const res = await fetch(`${API_BASE}/market/watchlist/list`).then(r => r.json());
+            if (res.code === 200) {
+                watchlist = res.data;
+                const tbody = document.getElementById('table-body');
+                if (watchlist.length === 0) return;
+                tbody.innerHTML = watchlist.map(s => {
+                    const id = s.ts_code.replace('.', '-');
+                    return `<tr onclick="openDashboard('${s.ts_code}', '${s.stock_name}')"><td class="stock-name">${s.stock_name}<br><small style="color:var(--text-muted); font-weight:normal; font-family:Consolas;">${s.ts_code}</small></td><td id="spark-${id}">...</td><td id="price-${id}">--</td><td><span class="badge" id="badge-${id}">--</span></td><td id="vol-${id}">--</td><td id="turn-${id}">--</td></tr>`;
+                }).join('');
+                pollRealtime(); pollTrends(); // 确保加载后刷新走势图
+            }
+        } catch(e) {}
+    }
+
+    async function pollRealtime() {
+        if (watchlist.length === 0 || currentTab !== 'watchlist') return;
+        try {
+            const res = await fetch(`${API_BASE}/market/realtime`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(watchlist.map(s => s.ts_code)) }).then(r => r.json());
+            if (res.code === 200 && res.data) {
+                res.data.forEach(item => {
+                    const stock = watchlist.find(s => s.ts_code.startsWith(item.code));
+                    if (!stock) return;
+                    const id = stock.ts_code.replace('.', '-');
+                    const priceEl = document.getElementById(`price-${id}`);
+                    if (!priceEl) return;
+                    priceEl.innerText = item.price.toFixed(2); priceEl.className = item.change_pct >= 0 ? 'text-up' : 'text-down';
+                    const badge = document.getElementById(`badge-${id}`); badge.innerText = (item.change_pct > 0 ? '+' : '') + item.change_pct.toFixed(2) + '%'; badge.className = `badge ${item.change_pct >= 0 ? 'bg-up' : 'bg-down'}`;
+                    document.getElementById(`vol-${id}`).innerText = (item.volume / 10000).toFixed(1) + "万"; document.getElementById(`turn-${id}`).innerText = item.turnover.toFixed(2) + "%";
+                });
+            }
+        } catch(e){}
+    }
+
+    async function pollTrends() {
+        if (watchlist.length === 0 || currentTab !== 'watchlist') return;
+        await Promise.all(watchlist.map(async (stock) => {
+            const id = stock.ts_code.replace('.', '-');
+            const badge = document.getElementById(`badge-${id}`);
+            const isUp = badge ? !badge.className.includes('bg-down') : true;
+            try {
+                const t = await fetch(`${API_BASE}/market/trend?ts_code=${stock.ts_code}`).then(r => r.json());
+                if(t.code === 200 && t.data.length > 0) drawTrend(id, t.data, isUp);
+            } catch(e) {}
+        }));
+    }
+
+    async function loadPortfolio() {
+        try {
+            const res = await fetch(`${API_BASE}/portfolio/list`).then(r => r.json());
+            if (res.code === 200) {
+                portfolioList = res.data;
+                const tbody = document.getElementById('portfolio-body');
+                if (portfolioList.length === 0) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 50px; color:#666;">暂无记录</td></tr>`; return; }
+                tbody.innerHTML = portfolioList.map(s => `<tr id="row-port-${s.ts_code.replace('.','-')}" onclick="openDashboard('${s.ts_code}', '${s.stock_name}')"><td class="stock-name">${s.stock_name}<br><small style="color:var(--text-muted); font-family:Consolas;">${s.ts_code}</small></td><td style="color:#fff;">${s.volume}</td><td style="color:var(--text-muted);">￥${s.avg_price.toFixed(3)}</td><td id="price-port-${s.ts_code.replace('.','-')}">--</td><td id="profit-port-${s.ts_code.replace('.','-')}" style="font-weight:bold;">--</td><td><span class="badge" id="pct-port-${s.ts_code.replace('.','-')}" style="background:#333;">0.00%</span></td><td><button onclick="event.stopPropagation(); triggerPortfolioAI('${s.ts_code}','${s.stock_name}')" style="color:#f03c50; background:rgba(240,60,80,0.15); border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">风控</button> <button onclick="event.stopPropagation(); sellPortfolio('${s.ts_code}')" style="color:var(--text-muted); background:transparent; border:1px solid #333; padding:4px 10px; border-radius:4px; cursor:pointer; margin-left:8px;">平仓</button></td></tr>`).join('');
+                pollPortfolioRealtime();
+            }
+        } catch(e) {}
+    }
+
+    // 🌟 修复平仓逻辑 (URL 编码 + 乐观删除)
+    async function sellPortfolio(ts_code) {
+        if (!confirm(`确定要清仓抛出 ${ts_code} 吗？此操作无法撤销。`)) return;
+        try {
+            const res = await fetch(`${API_BASE}/portfolio/sell?ts_code=${encodeURIComponent(ts_code)}`, {method: 'POST'}).then(r => r.json());
+            if (res.code === 200) {
+                const row = document.getElementById(`row-port-${ts_code.replace('.','-')}`);
+                if (row) row.remove();
+                loadPortfolio();
+            } else { alert(`⚠️ 平仓失败: ${res.msg}`); }
+        } catch(e) { alert(`⚠️ 网络异常，平仓失败`); }
+    }
+
+    async function pollPortfolioRealtime() {
+        if (portfolioList.length === 0 || currentTab !== 'portfolio') return;
+        try {
+            const tsCodes = portfolioList.map(s => s.ts_code);
+            const res = await fetch(`${API_BASE}/market/realtime`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(tsCodes) }).then(r => r.json());
+            if (res.code === 200 && res.data) {
+                res.data.forEach(item => {
+                    const portData = portfolioList.find(p => p.ts_code.startsWith(item.code));
+                    if(!portData) return;
+                    const id = `port-${portData.ts_code.replace('.', '-')}`;
+                    const currentPrice = item.price; const costPrice = portData.avg_price; const volume = portData.volume;
+                    const profitAmount = (currentPrice - costPrice) * volume; const profitPct = ((currentPrice - costPrice) / costPrice) * 100;
+                    document.getElementById(`price-${id}`).innerText = `￥${currentPrice.toFixed(2)}`; document.getElementById(`price-${id}`).className = currentPrice >= costPrice ? 'text-up' : 'text-down';
+                    document.getElementById(`profit-${id}`).innerText = `${profitAmount > 0 ? '+' : ''}${profitAmount.toFixed(2)}`; document.getElementById(`profit-${id}`).className = profitAmount >= 0 ? 'text-up' : 'text-down';
+                    document.getElementById(`pct-${id}`).innerText = `${profitPct > 0 ? '+' : ''}${profitPct.toFixed(2)}%`; document.getElementById(`pct-${id}`).className = `badge ${profitPct >= 0 ? 'bg-up' : 'bg-down'}`;
+                });
+            }
+        } catch(e){}
+    }
+
+    async function fetchHotspots() {
+        if (currentTab !== 'hotspots') return;
+        const grid = document.getElementById('hotspot-grid');
+        try {
+            const res = await fetch(`${API_BASE}/market/hotspots?limit=24`).then(r => r.json());
+            if (res.code === 200 && res.data && res.data.length > 0) {
+                grid.innerHTML = res.data.map(item => `<div class="hotspot-card"><div class="hc-header"><span class="hc-name">${item.sector_name}</span><span class="badge ${item.change_pct >= 0 ? 'bg-up' : 'bg-down'}">${item.change_pct > 0 ? '+' : ''}${item.change_pct.toFixed(2)}%</span></div><div class="hc-leader"><span style="color:var(--text-muted)">龙头领涨</span><b style="color:#fff">${item.top_stock_name}</b><span class="${item.top_stock_change >= 0 ? 'text-up' : 'text-down'}">${item.top_stock_change > 0 ? '+' : ''}${item.top_stock_change.toFixed(2)}%</span></div></div>`).join('');
+            }
+        } catch (e) {}
+    }
+
+    fetchIndices(); loadWatchlist(); loadPortfolio();
+    setInterval(() => {
+        if(currentTab === 'watchlist') pollRealtime();
+        else if (currentTab === 'portfolio') pollPortfolioRealtime();
+        else if (dashCurrentCode) fetchDashRealtime();
+    }, 10000);
+    setInterval(fetchIndices, 30000);
+</script>
+</body>
+</html>

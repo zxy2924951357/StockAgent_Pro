@@ -1,0 +1,65 @@
+# ==========================================
+# 1. 核心隐私文件 (最重要！防止 Tushare/LLM Token 泄露)
+# ==========================================
+.env
+.env.local
+*.key
+*.pem
+
+
+# ==========================================
+# 2. Python 运行环境与缓存
+# ==========================================
+# 虚拟环境 (Virtual Environments)
+.venv/
+venv/
+env/
+ENV/
+bin/
+include/
+lib/
+share/
+
+# Python 字节码缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 依赖分发包
+dist/
+build/
+*.egg-info/
+.installed.cfg
+*.egg
+
+
+# ==========================================
+# 3. 数据与日志 (避免上传本地生成的垃圾数据)
+# ==========================================
+*.log
+logs/
+data/
+cache/
+# 如果你的 tools 或 core 里会生成临时 json/csv，也建议忽略
+*.json
+*.csv
+# 但要排除项目必需的配置文件（如果有的话）
+# !config.json
+
+
+# ==========================================
+# 4. 编辑器与系统文件 (IDE & OS)
+# ==========================================
+# VS Code
+.vscode/
+!.vscode/extensions.json
+
+# PyCharm / IntelliJ
+.idea/
+
+# Windows 系统文件
+Thumbs.db
+desktop.ini
+
+# macOS 系统文件
+.DS_Store
