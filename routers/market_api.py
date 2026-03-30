@@ -22,9 +22,6 @@ router = APIRouter(prefix="/api/market", tags=["行情与自选"])
 for k in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'all_proxy', 'ALL_PROXY']:
     os.environ.pop(k, None)
 
-# ==========================================
-# 🌟 终极防封架构：UA随机池 + 抖动延迟
-# ==========================================
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
@@ -61,14 +58,12 @@ async def fetch_json_with_retry(url, timeout=5.0, retries=3):
             await asyncio.sleep(wait_time)
 
 
-# ==========================================
 _HOTSPOT_CACHE = {"data": None, "last_time": 0}
 _TREND_CACHE = {}
 _INDICES_CACHE = {"data": [], "last_time": 0}
 
-# 🌟 双重保护：后端的物理 TTL
-HOTSPOT_TTL = 300  # 热点 5分钟内坚决不重新拉取
-TREND_TTL = 30  # 趋势 30秒内坚决不重新拉取
+HOTSPOT_TTL = 300
+TREND_TTL = 30
 
 
 def safe_float(val):
@@ -84,12 +79,18 @@ def safe_float(val):
 
 
 def get_em_secid(ts_code: str) -> str:
+    # 1. 优先通过尾缀精准判断
+    ts_code_upper = ts_code.upper()
+    if ts_code_upper.endswith(".SH"):
+        return f"1.{ts_code[:6]}"
+    elif ts_code_upper.endswith(".SZ") or ts_code_upper.endswith(".BJ"):
+        return f"0.{ts_code[:6]}"
+
+    # 2. 兜底盲猜逻辑
     code = ts_code[:6]
     if code.startswith(('6', '9', '5')): return f"1.{code}"
     return f"0.{code}"
 
-
-# ================== 核心 API ==================
 
 @router.get("/search")
 async def search_stock(keyword: str = Query(...)):
@@ -104,14 +105,17 @@ async def search_stock(keyword: str = Query(...)):
 async def get_realtime_prices(ts_codes: List[str]):
     if not ts_codes: return {"code": 200, "data": []}
     secids = [get_em_secid(code) for code in ts_codes]
-    url = f"http://push2.eastmoney.com/api/qt/ulist.np/get?secids={','.join(secids)}&fields=f12,f14,f2,f3,f5,f8&fltt=2"
+
+    url = f"http://push2.eastmoney.com/api/qt/ulist.np/get?secids={','.join(secids)}&fields=f12,f14,f2,f3,f5,f6,f8&fltt=2"
     try:
         data = await fetch_json_with_retry(url, timeout=4.0)
         items = data.get("data", {}).get("diff", [])
         result = [{
             "code": item.get("f12", ""), "name": item.get("f14", ""),
-            "price": safe_float(item.get("f2")), "change_pct": safe_float(item.get("f3")),
-            "volume": safe_float(item.get("f5")), "turnover": safe_float(item.get("f8"))
+            "price": safe_float(item.get("f2")),
+            "change_pct": safe_float(item.get("f3")),
+            "volume": safe_float(item.get("f5")),
+            "turnover": safe_float(item.get("f8"))
         } for item in items]
         return {"code": 200, "data": result}
     except Exception as e:
@@ -123,7 +127,6 @@ async def get_stock_trend(ts_code: str = Query(...)):
     global _TREND_CACHE
     now = time.time()
     pure_code = ts_code[:6]
-    # 🌟 趋势 30秒 缓存拦截
     if pure_code in _TREND_CACHE and (now - _TREND_CACHE[pure_code]["last_time"]) < TREND_TTL:
         return {"code": 200, "data": _TREND_CACHE[pure_code]["data"]}
 
@@ -144,8 +147,6 @@ async def get_stock_trend(ts_code: str = Query(...)):
 async def get_hotspots(limit: int = Query(24)):
     global _HOTSPOT_CACHE
     now = time.time()
-
-    # 🌟 热点 5分钟 缓存拦截
     if _HOTSPOT_CACHE["data"] and (now - _HOTSPOT_CACHE["last_time"]) < HOTSPOT_TTL:
         return {"code": 200, "data": _HOTSPOT_CACHE["data"]}
 
@@ -163,10 +164,8 @@ async def get_hotspots(limit: int = Query(24)):
 
     try:
         data = await fetch_json_with_retry(url, timeout=5.0)
-
         raw_data = data.get("data")
         if not raw_data or not raw_data.get("diff"):
-            print(f"📅 [周末/维护] 实时接口为空，加载历史/兜底数据...")
             if _HOTSPOT_CACHE["data"]:
                 return {"code": 200, "data": _HOTSPOT_CACHE["data"]}
             return {"code": 200, "data": get_fallback_data()}
@@ -182,9 +181,7 @@ async def get_hotspots(limit: int = Query(24)):
         _HOTSPOT_CACHE["data"] = result
         _HOTSPOT_CACHE["last_time"] = now
         return {"code": 200, "data": result}
-
     except Exception as e:
-        print(f"\n❌ [行情接口] 抓取失败: {str(e)}")
         if _HOTSPOT_CACHE["data"]:
             return {"code": 200, "data": _HOTSPOT_CACHE["data"]}
         return {"code": 200, "data": get_fallback_data()}
@@ -212,8 +209,6 @@ async def get_market_indices():
     return {"code": 200, "data": _INDICES_CACHE["data"]}
 
 
-# ================== MongoDB CRUD ==================
-
 @router.post("/watchlist/add")
 async def add_watchlist(item: WatchlistItem):
     collection = mongo_manager.db["user_watchlist"]
@@ -239,42 +234,23 @@ async def remove_watchlist(ts_code: str = Query(...)):
     return {"code": 200, "msg": "彻底删除成功"}
 
 
-# ================== 🌟 进阶维度：历史 K 线接口 (前端 ECharts 绘图专用) ==================
-
 @router.get("/kline")
 async def get_stock_kline(ts_code: str = Query(...), limit: int = Query(60)):
-    """
-    获取个股最近 N 天的日 K 线数据，用于前端 ECharts 画图
-    """
     secid = get_em_secid(ts_code)
-    # klt=101 代表日线，fqt=1 代表前复权，end=20500000 是东财最大可用日期
     url = f"http://push2his.eastmoney.com/api/qt/stock/kline/get?secid={secid}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=101&fqt=1&end=20500000&lmt={limit}"
-
     try:
         data = await fetch_json_with_retry(url, timeout=5.0)
         klines = data.get("data", {}).get("klines", [])
-
         if not klines:
-            print(f"⚠️ [K线接口] 东财无数据，可能参数有误: {data}")
             return {"code": 404, "msg": "未获取到 K 线数据", "data": []}
-
         result = []
         for k in klines:
             parts = k.split(",")
-            # 解析东财的逗号分隔字符串
             result.append({
-                "date": parts[0],
-                "open": safe_float(parts[1]),
-                "close": safe_float(parts[2]),
-                "high": safe_float(parts[3]),
-                "low": safe_float(parts[4]),
-                "volume": safe_float(parts[5]),
-                "change_pct": safe_float(parts[8]),
-                "turnover": safe_float(parts[10])
+                "date": parts[0], "open": safe_float(parts[1]), "close": safe_float(parts[2]),
+                "high": safe_float(parts[3]), "low": safe_float(parts[4]), "volume": safe_float(parts[5]),
+                "change_pct": safe_float(parts[8]), "turnover": safe_float(parts[10])
             })
-
         return {"code": 200, "data": result, "name": data.get("data", {}).get("name", "")}
-
     except Exception as e:
-        print(f"❌ [K线接口] 服务端异常崩溃: {str(e)}")
         return {"code": 500, "msg": str(e), "data": []}

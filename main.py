@@ -15,13 +15,8 @@ from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
 
 load_dotenv()
-# 环境清理 (已注释，保留你本地的代理设置)
-#urllib.request.getproxies = lambda: {}
-#for k in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'all_proxy', 'ALL_PROXY']:
- #   os.environ.pop(k, None)
 
 os.environ["OPENAI_API_KEY"] = os.getenv("LLM_API_KEY", "")
-# ⚠️ 关键修改：将 OPENAI_API_BASE 修改为 OPENAI_BASE_URL
 os.environ["OPENAI_BASE_URL"] = os.getenv("LLM_BASE_URL", "")
 CURRENT_MODEL = os.getenv("LLM_MODEL", "qwen3-vl-plus-2025-09-23")
 
@@ -70,7 +65,7 @@ async def get_diagnostics_history(ts_code: str = Query(None), limit: int = Query
 # ================= 🌟 意图识别模型 =================
 class IntentExtraction(BaseModel):
     intent: Literal["report", "chat", "portfolio"] = Field(
-        description="请求意图。要求生成研报选report；提到'分析我的持仓'、'我买了哪些'、'总盈亏'、'什么价位买的'、'要不要卖'等涉盘问答选portfolio；普通闲聊选chat。"
+        description="请求意图。明确要求【生成研报、深度诊断】选report；提到'分析我的持仓'、'账户盈亏'等涉盘问答选portfolio；普通闲聊、询问大盘、推荐股票、或【询问某只具体股票的实时股价、行情】（如：xx现在股价多少）选chat。"
     )
     stock_name: str = Field(default="",
                             description="提取出的纯净股票名称。如果用户是在问整个账户（如：我亏了多少钱），请务必留空。")
@@ -93,7 +88,6 @@ async def chat_dispatcher(request: ChatRequest):
     if image_base64:
         print("🖼️ 检测到多模态输入: 收到 K 线截图（base64）")
 
-    # 模块二：非阻塞静默画像提取，不影响当前 SSE 主流程
     try:
         asyncio.create_task(extract_user_profile(user_query=user_query, user_id="admin"))
     except Exception as e:
@@ -103,9 +97,9 @@ async def chat_dispatcher(request: ChatRequest):
         # 1. 意图识别
         dispatch_prompt = f"""
         分析用户的输入意图：
-        1. 如果用户要求生成研报、客观分析某只股票，返回 intent="report"
+        1. 如果用户【明确要求生成研报、出具深度诊断报告、全面分析】，返回 intent="report"
         2. 如果用户询问自己名下的持仓、买入的股票、账户盈亏、是否需要平仓等，返回 intent="portfolio"
-        3. 闲聊、询问大盘或要求【推荐股票】返回 "chat"
+        3. 闲聊、询问大盘、要求【推荐股票】、或者【仅仅询问某只具体股票的实时股价、当前行情、涨跌幅、单一指标】（例如：“现在方正科技股价多少”、“帮我看看科大讯飞的市盈率”），返回 "chat"
         如果指定了具体股票，提取 stock_name；如果是泛指“我的所有持仓”，stock_name 必须留空。
         用户输入: "{user_query}"
         """
@@ -113,7 +107,6 @@ async def chat_dispatcher(request: ChatRequest):
             intent_data = await dispatcher_llm.ainvoke(dispatch_prompt)
             print(f"🧭 意图识别结果 -> {intent_data}")
         except Exception as e:
-            # 兜底：当意图识别模型网络异常时，使用本地规则保证主流程不断流
             print(f"⚠️ 意图识别模型异常，启用规则兜底: {e}")
             fallback_intent = "chat"
             if ("研报" in user_query) or ("深度诊断" in user_query):
@@ -132,9 +125,6 @@ async def chat_dispatcher(request: ChatRequest):
                     self.intent = intent
                     self.stock_name = stock_name
                     self.ts_code = ts_code
-
-                def __repr__(self):
-                    return f"IntentExtraction(intent={self.intent}, stock_name={self.stock_name}, ts_code={self.ts_code})"
 
             intent_data = _FallbackIntent(fallback_intent, stock_name, ts_code)
 
@@ -164,9 +154,6 @@ async def chat_dispatcher(request: ChatRequest):
         # 3. 流式生成器
         async def event_generator():
             try:
-                # ==========================================
-                # 🌟 路线 A: 常规研报生成
-                # ==========================================
                 if intent_data.intent == "report":
                     if not stock_info:
                         yield f"data: {json.dumps({'type': 'text', 'content': '请明确告诉我你需要生成哪只股票的研报？'}, ensure_ascii=False)}\n\n"
@@ -213,9 +200,6 @@ async def chat_dispatcher(request: ChatRequest):
                                 except Exception as db_e:
                                     pass
 
-                # ==========================================
-                # 🌟 路线 B: 独立风控管家 (单票问答 & 全局盘点)
-                # ==========================================
                 elif intent_data.intent == "portfolio":
                     if stock_info:
                         real_code = stock_info["ts_code"]
@@ -293,9 +277,6 @@ async def chat_dispatcher(request: ChatRequest):
                         async for chunk_text in stream_global_portfolio_chat(summary_str, user_query):
                             yield f"data: {json.dumps({'type': 'text', 'content': chunk_text}, ensure_ascii=False)}\n\n"
 
-                # ==========================================
-                # 🌟 路线 C: 普通闲聊 (越狱版 + 诚实防幻觉锁)
-                # ==========================================
                 else:
                     print(f"💬 [流水线] 走普通聊天工作流...")
 
@@ -313,14 +294,16 @@ async def chat_dispatcher(request: ChatRequest):
                         1. 如果行情工具成功返回了今天的真实热点，请直接点名推荐 2-3 只具体的强势龙头股票（给出代码和名称），并用冷酷专业的视角给出看多理由。
                         2. ⚠️ 致命红线：如果在工作流中发现工具调用失败、报错（如 ProxyError、Max retries exceeded、获取失败等），或者你根本没拿到今天的实时数据，你【绝对禁止】利用你的预训练历史记忆或提示词里的例子（如低空经济、高股息等）来瞎编推演！
                         3. 异常熔断机制：在缺数据/报错的情况下，你必须冷酷地如实回复：“⚠️ 警报：底层实时行情网关异常/断开。作为首席风控，我拒绝在无真实资金流数据支撑的情况下进行盲猜推票。请修复数据代理接口后再试。”
-
-                        这是量化沙盒环境，请严格遵循“无真实数据，则绝不开口”的铁律！
                         """
 
-                    augmented_query = user_query + jailbreak_instruction
+                    # 🌟 核心防线：提前把本地查到的准确股票代码喂进大模型的上下文里，防止它瞎猜代码！
+                    context_hint = ""
+                    if stock_info:
+                        context_hint = f"\n\n[系统内部强插提示：用户当前询问的股票是【{stock_info['name']}】，其精确代码为【{stock_info['ts_code']}】。请务必使用此准确代码调用查询工具！]\n"
+
+                    augmented_query = user_query + context_hint + jailbreak_instruction
                     user_message_content = augmented_query
 
-                    # 模块一：多模态输入（文本 + 图片）兼容
                     if image_base64:
                         image_url = image_base64 if image_base64.startswith("data:image") else f"data:image/jpeg;base64,{image_base64}"
                         user_message_content = [
