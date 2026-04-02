@@ -1,65 +1,84 @@
-# ==========================================
-# 1. 核心隐私文件 (最重要！防止 Tushare/LLM Token 泄露)
+﻿# ==========================================
+# Secrets / local config
 # ==========================================
 .env
-.env.local
+.env.*
+!.env.example
 *.key
 *.pem
-
+*.p12
+*.crt
 
 # ==========================================
-# 2. Python 运行环境与缓存
+# Python environments / caches
 # ==========================================
-# 虚拟环境 (Virtual Environments)
 .venv/
 venv/
 env/
 ENV/
-bin/
-include/
-lib/
-share/
-
-# Python 字节码缓存
 __pycache__/
+*/__pycache__/
 *.py[cod]
 *$py.class
-
-# 依赖分发包
-dist/
-build/
-*.egg-info/
-.installed.cfg
-*.egg
-
+.pycache_tmp/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 
 # ==========================================
-# 3. 数据与日志 (避免上传本地生成的垃圾数据)
+# Build / packaging
+# ==========================================
+build/
+dist/
+site/
+*.egg
+*.egg-info/
+.installed.cfg
+pip-wheel-metadata/
+
+# ==========================================
+# Logs / runtime temp files
 # ==========================================
 *.log
 logs/
+log/
+tmp/
+temp/
+*.pid
+*.out
+*.err
+
+# ==========================================
+# Local data / generated artifacts
+# Keep source json/csv trackable; ignore only generated storage
+# ==========================================
 data/
 cache/
-# 如果你的 tools 或 core 里会生成临时 json/csv，也建议忽略
-*.json
-*.csv
-# 但要排除项目必需的配置文件（如果有的话）
-# !config.json
-
+uploads/
+downloads/
+artifacts/
+checkpoints/
+*.sqlite3
+*.db
 
 # ==========================================
-# 4. 编辑器与系统文件 (IDE & OS)
+# IDE / editor / OS files
 # ==========================================
-# VS Code
+.idea/
 .vscode/
 !.vscode/extensions.json
-
-# PyCharm / IntelliJ
-.idea/
-
-# Windows 系统文件
 Thumbs.db
 desktop.ini
-
-# macOS 系统文件
 .DS_Store
+
+# ==========================================
+# Frontend / misc
+# ==========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

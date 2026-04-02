@@ -10,8 +10,8 @@ from tools.get_akshare import query_stock_fund_flow
 from tools.get_realtime import query_realtime_price
 
 load_dotenv()
-ts.set_token(os.getenv("TUSHARE_TOKEN", ""))
-pro = ts.pro_api()
+TUSHARE_TOKEN = os.getenv("TUSHARE_TOKEN", "")
+pro = ts.pro_api(TUSHARE_TOKEN)
 
 # 🌟 统一拦截器：把大模型按在地上摩擦，禁止它编造
 def _format_err(msg: str) -> str:

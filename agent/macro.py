@@ -16,8 +16,8 @@ from tools.get_screener import tool_multi_factor_screening
 from tools.get_news import tool_get_macro_hotspots
 
 load_dotenv()
-ts.set_token(os.getenv("TUSHARE_TOKEN", ""))
-pro = ts.pro_api()
+TUSHARE_TOKEN = os.getenv("TUSHARE_TOKEN", "")
+pro = ts.pro_api(TUSHARE_TOKEN)
 
 @tool
 async def query_market_status(query_type: str) -> str:

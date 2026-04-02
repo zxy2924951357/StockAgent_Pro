@@ -8,8 +8,8 @@ from langgraph.prebuilt import create_react_agent
 from core.db_manager import mongo_manager
 
 load_dotenv()
-ts.set_token(os.getenv("TUSHARE_TOKEN", ""))
-pro = ts.pro_api()
+TUSHARE_TOKEN = os.getenv("TUSHARE_TOKEN", "")
+pro = ts.pro_api(TUSHARE_TOKEN)
 
 @tool
 async def query_stock_basic_info(ts_code: str) -> str:

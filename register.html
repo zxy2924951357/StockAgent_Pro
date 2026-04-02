@@ -1,0 +1,360 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建账号</title>
+    <style>
+        :root {
+            --panel: rgba(10, 19, 33, 0.82);
+            --panel-strong: rgba(9, 16, 28, 0.9);
+            --panel-border: rgba(108, 141, 177, 0.18);
+            --panel-border-strong: rgba(127, 166, 206, 0.24);
+            --text: #eef4fb;
+            --text-soft: #8fa4bb;
+            --text-dim: #6f859c;
+            --accent: #52c98a;
+            --accent-strong: #2d9b68;
+            --accent-soft: rgba(82, 201, 138, 0.14);
+            --danger: #f46d6d;
+            --success: #34c78a;
+            --input-bg: rgba(7, 14, 24, 0.86);
+            --input-border: rgba(126, 164, 202, 0.18);
+            --shadow: 0 32px 90px rgba(2, 8, 18, 0.42);
+            --page-surface: radial-gradient(circle at top left, rgba(82, 201, 138, 0.12), transparent 28%), radial-gradient(circle at right top, rgba(87, 163, 255, 0.14), transparent 24%), linear-gradient(135deg, #06101c 0%, #0f2034 48%, #122d45 100%);
+            --feature-bg: rgba(255, 255, 255, 0.04);
+        }
+        :root[data-theme="day"] {
+            --panel: rgba(255, 255, 255, 0.92);
+            --panel-strong: rgba(248, 251, 255, 0.96);
+            --panel-border: rgba(78, 122, 158, 0.12);
+            --panel-border-strong: rgba(72, 125, 171, 0.18);
+            --text: #18334f;
+            --text-soft: #64809b;
+            --text-dim: #7c95ad;
+            --accent: #1f9d67;
+            --accent-strong: #16794d;
+            --accent-soft: rgba(31, 157, 103, 0.12);
+            --danger: #d14949;
+            --success: #1b9e69;
+            --input-bg: rgba(246, 249, 253, 0.96);
+            --input-border: rgba(110, 148, 184, 0.18);
+            --shadow: 0 28px 70px rgba(49, 80, 110, 0.18);
+            --page-surface: radial-gradient(circle at top left, rgba(31, 157, 103, 0.12), transparent 28%), radial-gradient(circle at right top, rgba(83, 137, 224, 0.12), transparent 24%), linear-gradient(135deg, #f7fbff 0%, #ebf4fb 45%, #d9ecfb 100%);
+            --feature-bg: rgba(255, 255, 255, 0.62);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 28px;
+            font-family: "Microsoft YaHei", sans-serif;
+            color: var(--text);
+            background: var(--page-surface);
+        }
+        .shell {
+            width: min(1080px, 100%);
+            display: grid;
+            grid-template-columns: 0.94fr 1.06fr;
+            border-radius: 30px;
+            overflow: hidden;
+            border: 1px solid var(--panel-border);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+            background: rgba(5, 12, 21, 0.14);
+        }
+        .form-side {
+            padding: 34px;
+            background: var(--panel);
+        }
+        .feature-side {
+            padding: 36px;
+            background: var(--panel-strong);
+            border-left: 1px solid var(--panel-border);
+            position: relative;
+        }
+        .top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 42px;
+        }
+        .brand {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .brand-mark {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            box-shadow: 0 16px 34px rgba(31, 157, 103, 0.28);
+        }
+        .brand-name {
+            font-size: 14px;
+            letter-spacing: 2px;
+            color: var(--text-soft);
+        }
+        .theme-btn {
+            border: 1px solid var(--panel-border-strong);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-soft);
+            border-radius: 999px;
+            padding: 9px 16px;
+            cursor: pointer;
+        }
+        .theme-btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+        .form-kicker {
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .form-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .form-desc {
+            color: var(--text-soft);
+            font-size: 14px;
+            line-height: 1.8;
+            margin-bottom: 24px;
+        }
+        .tips {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+        .tip {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .input-group { margin-bottom: 18px; }
+        .input-group label {
+            display: block;
+            margin-bottom: 9px;
+            font-size: 13px;
+            color: var(--text-soft);
+        }
+        .input-group input {
+            width: 100%;
+            padding: 15px 16px;
+            border-radius: 16px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--text);
+            outline: none;
+            font-size: 14px;
+        }
+        .input-group input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(82, 201, 138, 0.12);
+        }
+        .btn {
+            width: 100%;
+            margin-top: 8px;
+            border: none;
+            border-radius: 18px;
+            padding: 15px 18px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #ffffff;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            box-shadow: 0 18px 34px rgba(31, 157, 103, 0.24);
+            cursor: pointer;
+        }
+        .link-text {
+            margin-top: 18px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-soft);
+        }
+        .link-text a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 700;
+        }
+        #message {
+            min-height: 24px;
+            margin-top: 16px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .feature-kicker {
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 14px;
+        }
+        .feature-title {
+            font-size: 34px;
+            font-weight: 700;
+            line-height: 1.22;
+            margin-bottom: 16px;
+        }
+        .feature-list {
+            display: grid;
+            gap: 14px;
+            margin-top: 28px;
+        }
+        .feature-item {
+            padding: 18px 18px 16px;
+            border-radius: 20px;
+            background: var(--feature-bg);
+            border: 1px solid var(--panel-border);
+        }
+        .feature-item strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        .feature-item span {
+            display: block;
+            color: var(--text-soft);
+            font-size: 13px;
+            line-height: 1.75;
+        }
+        @media (max-width: 920px) {
+            .shell { grid-template-columns: 1fr; }
+            .feature-side {
+                border-left: none;
+                border-top: 1px solid var(--panel-border);
+            }
+        }
+        @media (max-width: 560px) {
+            body { padding: 16px; }
+            .form-side, .feature-side { padding: 24px 20px; }
+            .form-title, .feature-title { font-size: 26px; }
+        }
+    </style>
+</head>
+<body>
+<div class="shell">
+    <section class="form-side">
+        <div class="top-row">
+            <div class="brand">
+                <div class="brand-mark">量</div>
+                <div class="brand-name">量投终端</div>
+            </div>
+            <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">切换到白天</button>
+        </div>
+        <div class="form-kicker">账号创建</div>
+        <div class="form-title">注册新账号</div>
+        <div class="tips">
+            <div class="tip">用户名至少 3 个字符</div>
+            <div class="tip">密码至少 6 个字符</div>
+        </div>
+        <div class="input-group">
+            <label for="username">用户名</label>
+            <input type="text" id="username" placeholder="请输入用户名" autocomplete="off">
+        </div>
+        <div class="input-group">
+            <label for="password">密码</label>
+            <input type="password" id="password" placeholder="请输入密码">
+        </div>
+        <button class="btn" onclick="handleRegister()">立即创建账号</button>
+        <div class="link-text">已经有账号？<a href="login.html">返回登录</a></div>
+        <div id="message"></div>
+    </section>
+    <section class="feature-side">
+        <div class="feature-kicker">系统功能</div>
+        <div class="feature-title">核心能力一目了然</div>
+        <div class="feature-list">
+            <div class="feature-item">
+                <strong>行情与个股看板</strong>
+                <span>支持快速查看行情、个股详情、自选列表和热点追踪。</span>
+            </div>
+            <div class="feature-item">
+                <strong>智能分析面板</strong>
+                <span>围绕个股提供诊断、摘要和交互式分析能力。</span>
+            </div>
+            <div class="feature-item">
+                <strong>策略回测与模拟交易</strong>
+                <span>可进行回测、模拟建仓、持仓跟踪和收益统计。</span>
+            </div>
+            <div class="feature-item">
+                <strong>多方式检索</strong>
+                <span>支持中文、代码、数字和拼音模糊搜索。</span>
+            </div>
+        </div>
+    </section>
+</div>
+<script>
+    function applyTheme(theme) {
+        const nextTheme = theme === 'day' ? 'day' : 'night';
+        document.documentElement.setAttribute('data-theme', nextTheme);
+        localStorage.setItem('eq_theme', nextTheme);
+        document.getElementById('theme-btn').innerText = nextTheme === 'night' ? '切换到白天' : '切换到黑夜';
+    }
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'night';
+        applyTheme(currentTheme === 'night' ? 'day' : 'night');
+    }
+    async function handleRegister() {
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const msgDiv = document.getElementById('message');
+        if (!username || !password) {
+            msgDiv.style.color = 'var(--danger)';
+            msgDiv.innerText = '用户名和密码不能为空';
+            return;
+        }
+        if (username.length < 3 || password.length < 6) {
+            msgDiv.style.color = 'var(--danger)';
+            msgDiv.innerText = '用户名至少 3 个字符，密码至少 6 个字符';
+            return;
+        }
+        msgDiv.style.color = 'var(--text-soft)';
+        msgDiv.innerText = '正在创建账号...';
+        try {
+            const res = await fetch('http://127.0.0.1:8000/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            if (res.ok && data.code === 200) {
+                msgDiv.style.color = 'var(--success)';
+                msgDiv.innerText = data.msg;
+                setTimeout(() => { window.location.href = 'login.html'; }, 1000);
+            } else {
+                msgDiv.style.color = 'var(--danger)';
+                msgDiv.innerText = `注册失败：${data.detail || data.msg || '请稍后重试'}`;
+            }
+        } catch (e) {
+            msgDiv.style.color = 'var(--danger)';
+            msgDiv.innerText = '网络连接失败，请检查服务是否启动';
+        }
+    }
+    applyTheme(localStorage.getItem('eq_theme') || 'night');
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') handleRegister();
+    });
+</script>
+</body>
+</html>
+
+
+

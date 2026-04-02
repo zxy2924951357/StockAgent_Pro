@@ -1,14 +1,21 @@
-import asyncio
+﻿import asyncio
 import time
 import math
 import os
 import httpx
 import traceback
 import random
+import jwt
 from typing import List
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends, Header, HTTPException
 from pydantic import BaseModel
 from core.db_manager import mongo_manager
+from core.security import normalize_ts_code, sanitize_mongo_document, sanitize_stock_name, sanitize_text
+from core.stock_search import (
+    build_stock_search_query,
+    ensure_stock_search_fields,
+    score_stock_match,
+)
 
 
 class WatchlistItem(BaseModel):
@@ -16,9 +23,26 @@ class WatchlistItem(BaseModel):
     stock_name: str
 
 
-router = APIRouter(prefix="/api/market", tags=["行情与自选"])
+router = APIRouter(prefix="/api/market", tags=["market"])
 
-# 强制清洗系统代理
+SECRET_KEY = os.getenv("JWT_SECRET", "easyquant-super-secret-key-2026")
+ALGORITHM = "HS256"
+
+
+async def get_current_user(authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="未登录或登录已失效")
+    token = authorization.split(" ")[1]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if not username:
+            raise HTTPException(status_code=401, detail="登录信息无效")
+        return username
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="登录信息无效")
+
+
 for k in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'all_proxy', 'ALL_PROXY']:
     os.environ.pop(k, None)
 
@@ -54,7 +78,7 @@ async def fetch_json_with_retry(url, timeout=5.0, retries=3):
             if attempt == retries:
                 raise e
             wait_time = 0.5 + random.random() * 1.5
-            print(f"⚠️ [网络重试] 第 {attempt + 1} 次尝试，延迟 {wait_time:.2f}s...")
+            print(f"[network retry] attempt {attempt + 1}, wait {wait_time:.2f}s")
             await asyncio.sleep(wait_time)
 
 
@@ -68,43 +92,59 @@ TREND_TTL = 30
 
 def safe_float(val):
     try:
-        if val is None: return 0.0
+        if val is None:
+            return 0.0
         s_val = str(val).strip()
-        if s_val in ["", "-", "NaN", "nan", "None", "NaT"]: return 0.0
+        if s_val in ["", "-", "NaN", "nan", "None", "NaT"]:
+            return 0.0
         f_val = float(s_val)
-        if math.isnan(f_val): return 0.0
+        if math.isnan(f_val):
+            return 0.0
         return f_val
-    except:
+    except Exception:
         return 0.0
 
 
 def get_em_secid(ts_code: str) -> str:
-    # 1. 优先通过尾缀精准判断
     ts_code_upper = ts_code.upper()
     if ts_code_upper.endswith(".SH"):
         return f"1.{ts_code[:6]}"
-    elif ts_code_upper.endswith(".SZ") or ts_code_upper.endswith(".BJ"):
+    if ts_code_upper.endswith(".SZ") or ts_code_upper.endswith(".BJ"):
         return f"0.{ts_code[:6]}"
 
-    # 2. 兜底盲猜逻辑
     code = ts_code[:6]
-    if code.startswith(('6', '9', '5')): return f"1.{code}"
+    if code.startswith(('6', '9', '5')):
+        return f"1.{code}"
     return f"0.{code}"
 
 
 @router.get("/search")
 async def search_stock(keyword: str = Query(...)):
-    if not keyword.strip(): return {"code": 200, "data": []}
-    cursor = mongo_manager.db["stock_basic"].find({
-        "$or": [{"ts_code": {"$regex": keyword, "$options": "i"}}, {"name": {"$regex": keyword, "$options": "i"}}]
-    }, {"_id": 0, "ts_code": 1, "name": 1}).limit(8)
-    return {"code": 200, "data": await cursor.to_list(length=8)}
+    keyword = sanitize_text(keyword, field_name="搜索关键词", max_length=40)
+    if not keyword:
+        return {"code": 200, "data": []}
+    collection = mongo_manager.db["stock_basic"]
+    await ensure_stock_search_fields(collection)
+    cursor = collection.find(
+        build_stock_search_query(keyword),
+        {"_id": 0, "ts_code": 1, "symbol": 1, "name": 1, "name_pinyin": 1, "name_initials": 1}
+    ).limit(30)
+    stocks = await cursor.to_list(length=30)
+    ranked = sorted(stocks, key=lambda item: score_stock_match(item, keyword), reverse=True)[:8]
+    return {"code": 200, "data": ranked}
 
 
 @router.post("/realtime")
 async def get_realtime_prices(ts_codes: List[str]):
-    if not ts_codes: return {"code": 200, "data": []}
-    secids = [get_em_secid(code) for code in ts_codes]
+    normalized_codes = []
+    for code in ts_codes[:80]:
+        try:
+            normalized_codes.append(normalize_ts_code(code))
+        except HTTPException:
+            continue
+    if not normalized_codes:
+        return {"code": 200, "data": []}
+    secids = [get_em_secid(code) for code in normalized_codes]
 
     url = f"http://push2.eastmoney.com/api/qt/ulist.np/get?secids={','.join(secids)}&fields=f12,f14,f2,f3,f5,f6,f8&fltt=2"
     try:
@@ -118,12 +158,13 @@ async def get_realtime_prices(ts_codes: List[str]):
             "turnover": safe_float(item.get("f8"))
         } for item in items]
         return {"code": 200, "data": result}
-    except Exception as e:
+    except Exception:
         return {"code": 200, "data": []}
 
 
 @router.get("/trend")
 async def get_stock_trend(ts_code: str = Query(...)):
+    ts_code = normalize_ts_code(ts_code)
     global _TREND_CACHE
     now = time.time()
     pure_code = ts_code[:6]
@@ -145,6 +186,7 @@ async def get_stock_trend(ts_code: str = Query(...)):
 
 @router.get("/hotspots")
 async def get_hotspots(limit: int = Query(24)):
+    limit = min(max(int(limit), 1), 50)
     global _HOTSPOT_CACHE
     now = time.time()
     if _HOTSPOT_CACHE["data"] and (now - _HOTSPOT_CACHE["last_time"]) < HOTSPOT_TTL:
@@ -154,12 +196,9 @@ async def get_hotspots(limit: int = Query(24)):
 
     def get_fallback_data():
         return [
-            {"sector_name": "人工智能(周末快照)", "change_pct": 2.45, "top_stock_name": "科大讯飞",
-             "top_stock_change": 5.23},
-            {"sector_name": "光通信(周末快照)", "change_pct": 1.88, "top_stock_name": "光迅科技",
-             "top_stock_change": 3.45},
-            {"sector_name": "半导体(周末快照)", "change_pct": -0.56, "top_stock_name": "中芯国际",
-             "top_stock_change": 1.22}
+            {"sector_name": "人工智能(缓存)", "change_pct": 2.45, "top_stock_name": "科大讯飞", "top_stock_change": 5.23},
+            {"sector_name": "光通信(缓存)", "change_pct": 1.88, "top_stock_name": "光迅科技", "top_stock_change": 3.45},
+            {"sector_name": "半导体(缓存)", "change_pct": -0.56, "top_stock_name": "中芯国际", "top_stock_change": 1.22}
         ]
 
     try:
@@ -181,7 +220,7 @@ async def get_hotspots(limit: int = Query(24)):
         _HOTSPOT_CACHE["data"] = result
         _HOTSPOT_CACHE["last_time"] = now
         return {"code": 200, "data": result}
-    except Exception as e:
+    except Exception:
         if _HOTSPOT_CACHE["data"]:
             return {"code": 200, "data": _HOTSPOT_CACHE["data"]}
         return {"code": 200, "data": get_fallback_data()}
@@ -199,8 +238,9 @@ async def get_market_indices():
         items = data.get("data", {}).get("diff", [])
         if items:
             result = [
-                {"name": i.get("f14", ""), "price": safe_float(i.get("f2")), "change_pct": safe_float(i.get("f3"))} for
-                i in items]
+                {"name": i.get("f14", ""), "price": safe_float(i.get("f2")), "change_pct": safe_float(i.get("f3"))}
+                for i in items
+            ]
             _INDICES_CACHE["data"] = result
             _INDICES_CACHE["last_time"] = now
             return {"code": 200, "data": result}
@@ -210,32 +250,50 @@ async def get_market_indices():
 
 
 @router.post("/watchlist/add")
-async def add_watchlist(item: WatchlistItem):
+async def add_watchlist(item: WatchlistItem, current_user: str = Depends(get_current_user)):
     collection = mongo_manager.db["user_watchlist"]
     basic_coll = mongo_manager.db["stock_basic"]
-    raw_input = item.ts_code.strip().upper()
-    stock_info = await basic_coll.find_one(
-        {"$or": [{"ts_code": {"$regex": f"^{raw_input}"}}, {"name": {"$regex": f"^{raw_input}"}}]})
-    if not stock_info: return {"code": 404, "msg": f"未找到匹配的股票"}
-    await collection.update_one({"ts_code": stock_info["ts_code"]},
-                                {"$set": {"ts_code": stock_info["ts_code"], "stock_name": stock_info["name"]}},
-                                upsert=True)
+    raw_input = normalize_ts_code(item.ts_code)
+    await ensure_stock_search_fields(basic_coll)
+    stock_info = await basic_coll.find_one({"ts_code": raw_input})
+    if not stock_info:
+        stock_info = await basic_coll.find_one({"symbol": raw_input[:6]})
+    if not stock_info:
+        stock_info = await basic_coll.find_one(build_stock_search_query(raw_input))
+    if not stock_info:
+        return {"code": 404, "msg": "未找到匹配的股票"}
+    await collection.update_one(
+        {"user_id": current_user, "ts_code": stock_info["ts_code"]},
+        {"$set": sanitize_mongo_document({
+            "user_id": current_user,
+            "ts_code": stock_info["ts_code"],
+            "stock_name": sanitize_stock_name(stock_info["name"]),
+            "updated_at": time.time()
+        })},
+        upsert=True
+    )
     return {"code": 200, "msg": "添加成功"}
 
 
 @router.get("/watchlist/list")
-async def get_watchlist():
-    return {"code": 200, "data": await mongo_manager.db["user_watchlist"].find({}, {"_id": 0}).to_list(length=100)}
+async def get_watchlist(current_user: str = Depends(get_current_user)):
+    data = await mongo_manager.db["user_watchlist"].find(
+        {"user_id": current_user},
+        {"_id": 0, "user_id": 0, "updated_at": 0}
+    ).to_list(length=100)
+    return {"code": 200, "data": data}
 
 
 @router.delete("/watchlist/remove")
-async def remove_watchlist(ts_code: str = Query(...)):
-    await mongo_manager.db["user_watchlist"].delete_one({"ts_code": ts_code.strip()})
-    return {"code": 200, "msg": "彻底删除成功"}
+async def remove_watchlist(ts_code: str = Query(...), current_user: str = Depends(get_current_user)):
+    await mongo_manager.db["user_watchlist"].delete_one({"user_id": current_user, "ts_code": normalize_ts_code(ts_code)})
+    return {"code": 200, "msg": "删除成功"}
 
 
 @router.get("/kline")
 async def get_stock_kline(ts_code: str = Query(...), limit: int = Query(60)):
+    ts_code = normalize_ts_code(ts_code)
+    limit = min(max(int(limit), 20), 240)
     secid = get_em_secid(ts_code)
     url = f"http://push2his.eastmoney.com/api/qt/stock/kline/get?secid={secid}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&klt=101&fqt=1&end=20500000&lmt={limit}"
     try:

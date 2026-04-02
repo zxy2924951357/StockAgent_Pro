@@ -8,9 +8,7 @@ load_dotenv()
 
 # 初始化 Tushare
 TUSHARE_TOKEN = os.getenv("TUSHARE_TOKEN", "")
-if TUSHARE_TOKEN:
-    ts.set_token(TUSHARE_TOKEN)
-pro = ts.pro_api()
+pro = ts.pro_api(TUSHARE_TOKEN)
 
 
 def _fetch_fundamental_sync(ts_code: str):

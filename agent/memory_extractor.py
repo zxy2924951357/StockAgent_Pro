@@ -30,13 +30,15 @@ class UserProfileExtraction(BaseModel):
     )
 
 
-async def extract_user_profile(user_query: str, user_id: str = "admin") -> None:
+async def extract_user_profile(user_query: str, user_id: str) -> None:
     """
     从用户自然语言中静默提取画像并持久化到 user_profile 集合。
     失败时只记录日志，不抛出异常，不影响主流程。
     """
     try:
         if not user_query or not user_query.strip():
+            return
+        if not user_id or not str(user_id).strip():
             return
 
         model_name = os.getenv("LLM_MODEL", "qwen3-vl-plus-2025-09-23")
