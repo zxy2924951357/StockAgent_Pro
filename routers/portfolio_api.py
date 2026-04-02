@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from core.db_manager import mongo_manager
 from core.security import normalize_ts_code, sanitize_mongo_document, sanitize_stock_name
+from core.ui_translation import translate_texts_to_english
 
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 
@@ -128,4 +129,7 @@ async def get_portfolio(current_user: str = Depends(get_current_user)):
         {"_id": 0, "user_id": 0}
     ).sort("updated_at", -1)
     portfolio = await cursor.to_list(length=100)
+    translated_names = await translate_texts_to_english([item.get("stock_name", "") for item in portfolio], domain="stock_name")
+    for item, stock_name_en in zip(portfolio, translated_names):
+        item["stock_name_en"] = stock_name_en
     return {"code": 200, "data": portfolio}

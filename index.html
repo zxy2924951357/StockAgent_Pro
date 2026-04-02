@@ -229,6 +229,228 @@
     // ============== 全局认证与头像工具 ==============
     let authToken = '';
     let authUser = '';
+    const LANG_KEY = 'eq_lang';
+    let currentLanguage = localStorage.getItem(LANG_KEY) || 'zh-CN';
+    const I18N = {
+        'zh-CN': {
+            brand: '量投终端', currentUser: '当前用户', profileCenter: '个人中心', logout: '退出登录',
+            navWatchlist: '自选', navPortfolio: '持仓', navHotspots: '热点',
+            watchlistTitle: '我的自选', watchlistColName: '股票名称 / 代码', watchlistColTrend: '分时走势', watchlistColPrice: '最新价', watchlistColChange: '涨跌幅', watchlistColVolume: '成交量', watchlistColTurnover: '换手率',
+            portfolioTitle: '模拟持仓监控', portfolioColName: '持仓标的', portfolioColVolume: '数量', portfolioColCost: '成本价', portfolioColCurrent: '现价', portfolioColProfit: '浮动盈亏', portfolioColProfitPct: '盈亏比',
+            hotspotsTitle: '全市场热点追踪', backHall: '◀ 返回大厅', userCenter: '个人中心',
+            themeToDay: '切换到白天', themeToNight: '切换到黑夜', themeNight: '黑夜', themeDay: '白天', toggleTheme: '切换主题',
+            languageLabel: '界面语言', languageZh: '中文', languageEn: '英文', toggleLanguage: '切换语言',
+            searchPlaceholder: '全局搜索代码、拼音或名称，回车直达个股看板...', loadingData: '数据连接中...',
+            emptyWatchlist: '暂无自选，请先在顶部搜索后添加', emptyPortfolio: '暂无持仓记录', loadingProfile: '正在同步个人资料...',
+            passwordSaved: '密码修改成功，请重新登录', loadingAvatar: '正在保存头像...', avatarSaved: '头像已保存', avatarFailed: '头像保存失败',
+            passwordRequired: '请完整填写当前密码、新密码和确认密码', passwordMismatch: '两次输入的新密码不一致', passwordSubmitting: '正在提交修改...', passwordFailed: '密码修改失败',
+            historyLoading: '正在加载历史研报...', historyEmpty: '当前股票暂无历史研报记录。', historyTitle: '历史研报', historyFailed: '历史研报加载失败',
+            deleteReportConfirm: '确定删除这条历史研报吗？', deleteAction: '删除', expandAction: '展开',
+            addWatchlist: '加入自选', watched: '已加入自选', addWatchlistFailed: '加入自选失败', removeWatchlistFailed: '移除自选失败',
+            loadingTrend: '载入中...', noResult: '未找到匹配结果', diagnosis: '诊断', closePosition: '平仓',
+            closePositionConfirm: '确定要清仓抛出 {code} 吗？', sellFailed: '平仓失败：{msg}', requestFailed: '网络异常，请求失败',
+            invalidTrade: '请输入有效的价格和数量', submitting: '正在提交...', buySuccess: '建仓成功',
+            backtestRunning: '⚙️ 引擎运算中...', runBacktest: '开始回测', noKline: '暂无K线数据', loadFailed: '加载失败',
+            historyReportBtn: '历史研报', smartDiagnosisBtn: '智能诊断', riskDiagnosisBtn: '风控诊断', simulateTradeBtn: '模拟建仓',
+            tradeTitle: '录入建仓信息', buyPricePh: '买入均价', buyVolPh: '买入数量（股）', confirmBuy: '确认建仓',
+            paneTitle: '智能分析面板', clearPane: '清空面板', ratioLabel: '量比', turnoverLabel: '换手',
+            dashboardKline: '分时与日线', dashboardBacktest: '策略回测', btStrat: '策略净收益', btStock: '个股自然收益', btWin: '交易胜率', btDrawdown: '最大回撤',
+            btPlaceholder: '请点击“开始回测”运行策略', hotLeader: '领涨龙头',
+            createdAtLabel: '创建时间', selectAvatar: '选择头像', imageTooLarge: '图片过大，请控制在 2 兆以内',
+            cumulativePnl: '累计模拟收益率', backtestCount: '历史回测次数', diagnosisCount: '智能诊断次数', trackedCount: '自选追踪标的',
+            aiProfileTitle: '智能投资画像', riskPreferenceTag: '风险偏好', tradingStyleTag: '交易风格', coreSettingsTitle: '核心参数设置',
+            defaultSlippage: '回测默认滑点', defaultCommission: '回测默认佣金', marketTokenLabel: '专属行情令牌（覆盖系统默认）',
+            marketTokenPh: '填写专属令牌以提升速度', changePasswordTitle: '修改登录密码', currentPasswordPh: '当前密码',
+            newPasswordPh: '新密码（6-64 位）', confirmPasswordPh: '确认新密码', confirmAction: '确认修改', resetAction: '清空',
+            dashboardLoading: '正在加载最新行情...', strategyMaCross: '双均线交叉（五日线上穿二十日线）',
+            strategyMacdTrend: '平滑异同均线动能跟随（金叉）', strategyRsiReversion: '相对强弱指标超卖反弹（跌破三十）',
+            klineSeries: 'K线', volumeSeries: '成交量', strategySeries: '策略净值', benchmarkSeries: '基准收益'
+        },
+        'en-US': {
+            brand: 'Quant Terminal', currentUser: 'Current User', profileCenter: 'Profile Center', logout: 'Sign Out',
+            navWatchlist: 'Watchlist', navPortfolio: 'Portfolio', navHotspots: 'Hotspots',
+            watchlistTitle: 'My Watchlist', watchlistColName: 'Stock / Code', watchlistColTrend: 'Intraday Trend', watchlistColPrice: 'Last Price', watchlistColChange: 'Change %', watchlistColVolume: 'Volume', watchlistColTurnover: 'Turnover',
+            portfolioTitle: 'Paper Portfolio Monitor', portfolioColName: 'Holding', portfolioColVolume: 'Shares', portfolioColCost: 'Cost', portfolioColCurrent: 'Price', portfolioColProfit: 'Unrealized P&L', portfolioColProfitPct: 'Return %',
+            hotspotsTitle: 'Market Hotspots', backHall: '◀ Back', userCenter: 'Profile Center',
+            themeToDay: 'Switch to Light', themeToNight: 'Switch to Dark', themeNight: 'Dark', themeDay: 'Light', toggleTheme: 'Toggle Theme',
+            languageLabel: 'Language', languageZh: 'Chinese', languageEn: 'English', toggleLanguage: 'Change Language',
+            searchPlaceholder: 'Search by code, pinyin, or name and press Enter to open the dashboard...', loadingData: 'Connecting data...',
+            emptyWatchlist: 'No watchlist items yet. Search above and add one first.', emptyPortfolio: 'No holdings yet.', loadingProfile: 'Syncing your profile...',
+            passwordSaved: 'Password updated successfully. Please sign in again.', loadingAvatar: 'Saving avatar...', avatarSaved: 'Avatar saved.', avatarFailed: 'Failed to save avatar',
+            passwordRequired: 'Please enter your current password, new password, and confirmation.', passwordMismatch: 'The two new passwords do not match.', passwordSubmitting: 'Submitting changes...', passwordFailed: 'Failed to change password',
+            historyLoading: 'Loading report history...', historyEmpty: 'No historical reports for this stock.', historyTitle: 'Report History', historyFailed: 'Failed to load report history',
+            deleteReportConfirm: 'Delete this report history item?', deleteAction: 'Delete', expandAction: 'Expand',
+            addWatchlist: 'Add to Watchlist', watched: 'In Watchlist', addWatchlistFailed: 'Failed to add to watchlist', removeWatchlistFailed: 'Failed to remove from watchlist',
+            loadingTrend: 'Loading...', noResult: 'No matching result found', diagnosis: 'Diagnosis', closePosition: 'Close',
+            closePositionConfirm: 'Are you sure you want to close {code}?', sellFailed: 'Close failed: {msg}', requestFailed: 'Network error. Request failed.',
+            invalidTrade: 'Please enter a valid price and quantity', submitting: 'Submitting...', buySuccess: 'Position opened successfully',
+            backtestRunning: '⚙️ Running the engine...', runBacktest: 'Run Backtest', noKline: 'No candlestick data', loadFailed: 'Load failed',
+            historyReportBtn: 'Report History', smartDiagnosisBtn: 'Smart Diagnosis', riskDiagnosisBtn: 'Risk Diagnosis', simulateTradeBtn: 'Paper Trade',
+            tradeTitle: 'Enter trade details', buyPricePh: 'Buy price', buyVolPh: 'Quantity (shares)', confirmBuy: 'Confirm Buy',
+            paneTitle: 'Smart Analysis Panel', clearPane: 'Clear Panel', ratioLabel: 'Volume Ratio', turnoverLabel: 'Turnover',
+            dashboardKline: 'Intraday & Daily', dashboardBacktest: 'Strategy Backtest', btStrat: 'Strategy Return', btStock: 'Stock Return', btWin: 'Win Rate', btDrawdown: 'Max Drawdown',
+            btPlaceholder: 'Click "Run Backtest" to start', hotLeader: 'Top Performer',
+            createdAtLabel: 'Created', selectAvatar: 'Choose Avatar', imageTooLarge: 'Image is too large. Please keep it under 2 MB.',
+            cumulativePnl: 'Cumulative Paper Return', backtestCount: 'Backtests Run', diagnosisCount: 'AI Diagnoses', trackedCount: 'Watchlist Symbols',
+            aiProfileTitle: 'AI Investment Profile', riskPreferenceTag: 'Risk Preference', tradingStyleTag: 'Trading Style', coreSettingsTitle: 'Core Settings',
+            defaultSlippage: 'Default Backtest Slippage', defaultCommission: 'Default Backtest Commission', marketTokenLabel: 'Dedicated Market Token (Overrides Default)',
+            marketTokenPh: 'Enter your private token for faster market access', changePasswordTitle: 'Change Password', currentPasswordPh: 'Current password',
+            newPasswordPh: 'New password (6-64 chars)', confirmPasswordPh: 'Confirm new password', confirmAction: 'Confirm', resetAction: 'Reset',
+            dashboardLoading: 'Loading latest market data...', strategyMaCross: 'Dual Moving Average Crossover (MA5 above MA20)',
+            strategyMacdTrend: 'MACD Momentum Follow (Golden Cross)', strategyRsiReversion: 'RSI Oversold Rebound (Below 30)',
+            klineSeries: 'Candlestick', volumeSeries: 'Volume', strategySeries: 'Strategy NAV', benchmarkSeries: 'Benchmark Return'
+        }
+    };
+    function t(key) {
+        return (I18N[currentLanguage] || I18N['zh-CN'])[key] || key;
+    }
+    function tf(key, vars = {}) {
+        let text = t(key);
+        Object.entries(vars).forEach(([name, value]) => {
+            text = text.replace(`{${name}}`, value);
+        });
+        return text;
+    }
+    function getLocalizedField(record, baseKey, fallback = '') {
+        if (!record) return fallback;
+        const zhValue = record[baseKey];
+        const enValue = record[`${baseKey}_en`];
+        if (currentLanguage === 'en-US') return enValue || zhValue || fallback;
+        return zhValue || enValue || fallback;
+    }
+    function getLocalizedStockName(record, baseKey = 'stock_name') {
+        return getLocalizedField(record, baseKey, '--');
+    }
+    function applyLanguage(lang, { persist = true } = {}) {
+        currentLanguage = I18N[lang] ? lang : 'zh-CN';
+        if (persist) localStorage.setItem(LANG_KEY, currentLanguage);
+        document.documentElement.lang = currentLanguage === 'en-US' ? 'en' : 'zh-CN';
+        const textMap = {
+            'brand-text': 'brand',
+            'current-user-label': 'currentUser',
+            'profile-center-btn': 'profileCenter',
+            'logout-btn': 'logout',
+            'nav-watchlist-label': 'navWatchlist',
+            'nav-portfolio-label': 'navPortfolio',
+            'nav-hotspots-label': 'navHotspots',
+            'watchlist-title': 'watchlistTitle',
+            'watchlist-col-name': 'watchlistColName',
+            'watchlist-col-trend': 'watchlistColTrend',
+            'watchlist-col-price': 'watchlistColPrice',
+            'watchlist-col-change': 'watchlistColChange',
+            'watchlist-col-volume': 'watchlistColVolume',
+            'watchlist-col-turnover': 'watchlistColTurnover',
+            'portfolio-title': 'portfolioTitle',
+            'portfolio-col-name': 'portfolioColName',
+            'portfolio-col-volume': 'portfolioColVolume',
+            'portfolio-col-cost': 'portfolioColCost',
+            'portfolio-col-current': 'portfolioColCurrent',
+            'portfolio-col-profit': 'portfolioColProfit',
+            'portfolio-col-profitpct': 'portfolioColProfitPct',
+            'hotspots-title': 'hotspotsTitle',
+            'back-hall-btn': 'backHall',
+            'user-center-title': 'userCenter',
+            'theme-toggle-settings-btn': 'toggleTheme',
+            'language-setting-label': 'languageLabel',
+            'language-toggle-settings-btn': 'toggleLanguage'
+        };
+        Object.entries(textMap).forEach(([id, key]) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = t(key);
+        });
+        const searchInput = document.getElementById('global-search-input');
+        if (searchInput) searchInput.placeholder = t('searchPlaceholder');
+        const dataEl = document.getElementById('top-ticker-data');
+        if (dataEl && dataEl.innerText.trim() === '数据连接中...' || dataEl && dataEl.innerText.trim() === 'Connecting data...') dataEl.innerText = t('loadingData');
+        const languageValue = document.getElementById('language-setting-value');
+        if (languageValue) languageValue.innerText = currentLanguage === 'en-US' ? t('languageEn') : t('languageZh');
+        const menuLang = document.getElementById('language-toggle-menu');
+        if (menuLang) menuLang.innerText = currentLanguage === 'en-US' ? '中文' : 'English';
+        refreshThemeView();
+        refreshStaticPlaceholders();
+    }
+    async function toggleLanguage() {
+        const nextLanguage = currentLanguage === 'zh-CN' ? 'en-US' : 'zh-CN';
+        applyLanguage(nextLanguage);
+        try {
+            await fetch(`${API_BASE}/user/settings/language`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ language: nextLanguage })
+            });
+        } catch (e) {}
+        window.location.reload();
+    }
+    function refreshStaticPlaceholders() {
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput) {
+            chatInput.placeholder = currentLanguage === 'en-US'
+                ? 'Ask about a stock or trading idea. Press Ctrl+Enter to send.'
+                : '输入你想咨询的股票或交易逻辑，按控制键加回车发送';
+        }
+        const sendBtn = document.getElementById('send-btn');
+        if (sendBtn && !sendBtn.disabled) sendBtn.innerText = currentLanguage === 'en-US' ? 'Send' : '发送';
+        const watchlistBody = document.getElementById('table-body');
+        if (watchlistBody && watchlistBody.innerText.includes('暂无自选')) {
+            watchlistBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 50px; color:#666;">${t('emptyWatchlist')}</td></tr>`;
+        }
+        const portfolioBody = document.getElementById('portfolio-body');
+        if ((portfolioBody && portfolioBody.innerText.includes('暂无持仓')) || (portfolioBody && portfolioBody.innerText.includes('No holdings'))) {
+            portfolioBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 50px; color:#666;">${t('emptyPortfolio')}</td></tr>`;
+        }
+        const loadingEl = document.querySelector('#vue-user-app > div');
+        if (loadingEl && loadingEl.innerText.includes('同步个人资料')) loadingEl.innerText = t('loadingProfile');
+        const paneTitle = document.querySelector('.pane-title');
+        if (paneTitle) paneTitle.innerText = t('paneTitle');
+        const clearBtn = document.querySelector('.pane-header button');
+        if (clearBtn) clearBtn.innerText = t('clearPane');
+        const dashBacktest = document.getElementById('dash-tab-btn-backtest');
+        if (dashBacktest) dashBacktest.innerText = t('dashboardBacktest');
+        const dashKline = document.getElementById('dash-tab-btn-kline');
+        if (dashKline) dashKline.innerText = t('dashboardKline');
+        const dashAiBtn = document.getElementById('dash-btn-ai');
+        if (dashAiBtn) dashAiBtn.innerText = t('smartDiagnosisBtn');
+        const dashRiskBtn = document.getElementById('dash-btn-risk');
+        if (dashRiskBtn) dashRiskBtn.innerText = t('riskDiagnosisBtn');
+        const dashHistoryBtn = document.getElementById('dash-btn-history');
+        if (dashHistoryBtn) dashHistoryBtn.innerText = t('historyReportBtn');
+        const dashWatchBtn = document.getElementById('dash-btn-watch');
+        if (dashWatchBtn && !dashWatchBtn.dataset.locked) dashWatchBtn.innerText = t('addWatchlist');
+        const dashTradeBtn = document.getElementById('dash-btn-trade');
+        if (dashTradeBtn) dashTradeBtn.innerText = t('simulateTradeBtn');
+        const dashTradeTitle = document.getElementById('dash-trade-title');
+        if (dashTradeTitle) dashTradeTitle.innerText = t('tradeTitle');
+        const dashTradePrice = document.getElementById('dash-trade-price');
+        if (dashTradePrice) dashTradePrice.placeholder = t('buyPricePh');
+        const dashTradeVol = document.getElementById('dash-trade-vol');
+        if (dashTradeVol) dashTradeVol.placeholder = t('buyVolPh');
+        const dashTradeConfirm = document.getElementById('dash-trade-confirm');
+        if (dashTradeConfirm) dashTradeConfirm.innerText = t('confirmBuy');
+        const ratioWrap = document.getElementById('dash-vol-ratio')?.parentElement;
+        if (ratioWrap) ratioWrap.childNodes[0].textContent = `${t('ratioLabel')}: `;
+        const turnoverWrap = document.getElementById('dash-turnover')?.parentElement;
+        if (turnoverWrap) turnoverWrap.childNodes[0].textContent = `${t('turnoverLabel')}: `;
+        const dashLoading = document.getElementById('dash-kline-loading');
+        if (dashLoading && (dashLoading.innerText.includes('正在加载') || dashLoading.innerText.includes('Loading latest'))) dashLoading.innerText = t('dashboardLoading');
+        const dashRunBtn = document.getElementById('dash-bt-run-btn');
+        if (dashRunBtn) dashRunBtn.innerText = t('runBacktest');
+        const dashStrategy = document.getElementById('dash-bt-strategy');
+        if (dashStrategy && dashStrategy.options.length >= 3) {
+            dashStrategy.options[0].text = t('strategyMaCross');
+            dashStrategy.options[1].text = t('strategyMacdTrend');
+            dashStrategy.options[2].text = t('strategyRsiReversion');
+        }
+        [['dash-kpi-title-strat', 'btStrat'], ['dash-kpi-title-stock', 'btStock'], ['dash-kpi-title-win', 'btWin'], ['dash-kpi-title-drawdown', 'btDrawdown']].forEach(([id, key]) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = t(key);
+        });
+        const firstAgent = document.querySelector('#chat-history .agent-msg');
+        if (firstAgent && (firstAgent.innerText.includes('系统已就绪') || firstAgent.innerText.includes('smart analysis panel'))) {
+            firstAgent.innerHTML = currentLanguage === 'en-US'
+                ? '<p><b style="color:var(--active);">System ready.</b></p><p>This is your smart analysis panel.</p><ul><li>Use the top search bar for codes, pinyin, or names.</li><li>Click Smart Diagnosis or Risk Diagnosis for real-time analysis.</li><li>You can also ask directly below, for example: <b>Analyze the market trend for me</b>.</li></ul>'
+                : '<p><b style="color:var(--active);">系统已就绪。</b></p><p>这里是你的智能分析面板。</p><ul><li>顶部搜索支持代码、拼音和名称。</li><li>点击工具栏中的智能诊断或风控诊断，我会结合实时数据给出分析。</li><li>你也可以直接在下方提问，例如：<b>帮我分析一下大盘走势</b>。</li></ul>';
+        }
+    }
 
     function hydrateAuthState() {
         authToken = sessionStorage.getItem('eq_token') || localStorage.getItem('eq_token') || '';
@@ -292,8 +514,8 @@
         const isNight = currentTheme === 'night';
         const menuBtn = document.getElementById('theme-toggle-menu');
         const themeLabel = document.getElementById('theme-setting-value');
-        if (menuBtn) menuBtn.innerText = isNight ? '切换到白天' : '切换到黑夜';
-        if (themeLabel) themeLabel.innerText = isNight ? '黑夜' : '白天';
+        if (menuBtn) menuBtn.innerText = isNight ? t('themeToDay') : t('themeToNight');
+        if (themeLabel) themeLabel.innerText = isNight ? t('themeNight') : t('themeDay');
     }
 
     async function toggleTheme() {
@@ -329,6 +551,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+        applyLanguage(currentLanguage, { persist: false });
         applyTheme(localStorage.getItem('eq_theme') || 'night');
         syncTopbarProfile();
         document.addEventListener('click', (event) => {
@@ -342,7 +565,7 @@
 </head>
 <body>
     <div class="topbar">
-        <div class="logo"><span style="color:var(--active); font-size: 22px;">◬</span> 量投终端</div>
+        <div class="logo"><span style="color:var(--active); font-size: 22px;">◬</span> <span id="brand-text">量投终端</span></div>
 
         <div class="global-search-container">
             <span class="search-icon">🔍</span>
@@ -362,12 +585,13 @@
 
             <div id="profile-menu" class="profile-menu">
                 <div class="profile-menu-header">
-                    <div style="font-size: 12px; color: var(--text-muted);">当前用户</div>
+                    <div style="font-size: 12px; color: var(--text-muted);" id="current-user-label">当前用户</div>
                     <div class="profile-menu-name" id="profile-menu-username">--</div>
                 </div>
-                <button class="profile-menu-action" onclick="openProfileCenter()">个人中心</button>
+                <button class="profile-menu-action" id="profile-center-btn" onclick="openProfileCenter()">个人中心</button>
                 <button class="profile-menu-action" id="theme-toggle-menu" onclick="toggleTheme()">切换到白天</button>
-                <button class="profile-menu-action danger" onclick="logout()">退出登录</button>
+                <button class="profile-menu-action" id="language-toggle-menu" onclick="toggleLanguage()">English</button>
+                <button class="profile-menu-action danger" id="logout-btn" onclick="logout()">退出登录</button>
             </div>
         </div>
     </div>
@@ -375,49 +599,49 @@
     <div class="main-container">
 
         <div class="sidebar">
-            <div class="nav-item active" id="nav-watchlist" onclick="switchTab('watchlist')"><span class="nav-icon">📈</span><span>自选</span></div>
-            <div class="nav-item" id="nav-portfolio" onclick="switchTab('portfolio')"><span class="nav-icon">💼</span><span>持仓</span></div>
-            <div class="nav-item" id="nav-hotspots" onclick="switchTab('hotspots')"><span class="nav-icon">🔥</span><span>热点</span></div>
+            <div class="nav-item active" id="nav-watchlist" onclick="switchTab('watchlist')"><span class="nav-icon">📈</span><span id="nav-watchlist-label">自选</span></div>
+            <div class="nav-item" id="nav-portfolio" onclick="switchTab('portfolio')"><span class="nav-icon">💼</span><span id="nav-portfolio-label">持仓</span></div>
+            <div class="nav-item" id="nav-hotspots" onclick="switchTab('hotspots')"><span class="nav-icon">🔥</span><span id="nav-hotspots-label">热点</span></div>
         </div>
 
         <div class="center-pane">
 
             <div id="view-watchlist" class="page-view active">
-                <div class="view-header"><h2 class="view-title">我的自选</h2></div>
+                <div class="view-header"><h2 class="view-title" id="watchlist-title">我的自选</h2></div>
                 <div class="table-wrap">
                     <table>
-                        <thead><tr><th style="text-align: left;">股票名称 / 代码</th><th style="width: 136px; text-align: left;">分时走势</th><th>最新价</th><th>涨跌幅</th><th>成交量</th><th>换手率</th></tr></thead>
+                        <thead><tr><th style="text-align: left;" id="watchlist-col-name">股票名称 / 代码</th><th style="width: 136px; text-align: left;" id="watchlist-col-trend">分时走势</th><th id="watchlist-col-price">最新价</th><th id="watchlist-col-change">涨跌幅</th><th id="watchlist-col-volume">成交量</th><th id="watchlist-col-turnover">换手率</th></tr></thead>
                         <tbody id="table-body"><tr><td colspan="6" style="text-align:center; padding: 50px; color:#666;">暂无自选，请先在顶部搜索后添加</td></tr></tbody>
                     </table>
                 </div>
             </div>
 
             <div id="view-portfolio" class="page-view">
-                <div class="view-header"><h2 class="view-title">模拟持仓监控</h2></div>
+                <div class="view-header"><h2 class="view-title" id="portfolio-title">模拟持仓监控</h2></div>
                 <div class="table-wrap">
                     <table>
-                        <thead><tr><th style="text-align: left;">持仓标的</th><th>数量</th><th>成本价</th><th>现价</th><th>浮动盈亏</th><th>盈亏比</th></tr></thead>
+                        <thead><tr><th style="text-align: left;" id="portfolio-col-name">持仓标的</th><th id="portfolio-col-volume">数量</th><th id="portfolio-col-cost">成本价</th><th id="portfolio-col-current">现价</th><th id="portfolio-col-profit">浮动盈亏</th><th id="portfolio-col-profitpct">盈亏比</th></tr></thead>
                         <tbody id="portfolio-body"><tr><td colspan="6" style="text-align:center; padding: 50px; color:#666;">暂无持仓记录</td></tr></tbody>
                     </table>
                 </div>
             </div>
 
             <div id="view-hotspots" class="page-view">
-                <div class="view-header"><h2 class="view-title">全市场热点追踪</h2></div>
+                <div class="view-header"><h2 class="view-title" id="hotspots-title">全市场热点追踪</h2></div>
                 <div class="hotspot-container"><div class="hotspot-grid" id="hotspot-grid"></div></div>
             </div>
 
             <div id="view-user" class="page-view" style="z-index: 500; background: var(--bg);">
                 <div class="view-header" style="border-bottom: 1px solid var(--border);">
                     <h2 class="view-title">
-                        <button class="back-btn" onclick="switchTab('watchlist')">◀ 返回大厅</button>
-                        <span>个人中心</span>
+                        <button class="back-btn" id="back-hall-btn" onclick="switchTab('watchlist')">◀ 返回大厅</button>
+                        <span id="user-center-title">个人中心</span>
                     </h2>
                 </div>
 
                 <div id="vue-user-app" class="up-grid" style="grid-template-columns: 1fr 1fr; align-content: start;">
                     <div v-if="loading" style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 50px;">
-                        正在同步个人资料...
+                        {{ uiText('loadingProfile') }}
                     </div>
 
                     <template v-else>
@@ -426,10 +650,10 @@
                                 <img :src="currentAvatarUrl" class="up-avatar">
                                 <div style="flex: 1;">
                                     <div style="font-size: 20px; font-weight: bold; color: var(--text-strong); margin-bottom: 5px;">{{ dashboardData.basic_info.username }}</div>
-                                    <div style="font-size: 12px; color: var(--text-muted); font-family: Consolas; margin-bottom: 12px;">创建时间：{{ new Date(dashboardData.basic_info.created_at).toLocaleDateString() }}</div>
+                                    <div style="font-size: 12px; color: var(--text-muted); font-family: Consolas; margin-bottom: 12px;">{{ uiText('createdAtLabel') }}: {{ new Date(dashboardData.basic_info.created_at).toLocaleDateString(currentLanguage === 'en-US' ? 'en-US' : 'zh-CN') }}</div>
 
                                     <div class="upload-btn-wrapper">
-                                        <button class="upload-btn">选择头像</button>
+                                        <button class="upload-btn">{{ uiText('selectAvatar') }}</button>
                                         <input type="file" accept="image/png, image/jpeg, image/gif" @change="handleFileUpload">
                                     </div>
                                     <span v-if="uploadMsg" style="margin-left: 10px; font-size: 12px; color: var(--up);">{{ uploadMsg }}</span>
@@ -439,67 +663,74 @@
 
                         <div class="up-card" style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; padding: 15px;">
                             <div class="up-kpi-box">
-                                <div class="up-kpi-label">累计模拟收益率</div>
+                                <div class="up-kpi-label">{{ uiText('cumulativePnl') }}</div>
                                 <div class="up-kpi-val" :style="{ color: dashboardData.stats.cumulative_pnl >= 0 ? 'var(--up)' : 'var(--down)' }">{{ formatPercent(dashboardData.stats.cumulative_pnl) }}</div>
                             </div>
                             <div class="up-kpi-box">
-                                <div class="up-kpi-label">历史回测次数</div>
+                                <div class="up-kpi-label">{{ uiText('backtestCount') }}</div>
                                 <div class="up-kpi-val">{{ dashboardData.stats.backtest_count }}</div>
                             </div>
                             <div class="up-kpi-box">
-                                <div class="up-kpi-label">智能诊断次数</div>
+                                <div class="up-kpi-label">{{ uiText('diagnosisCount') }}</div>
                                 <div class="up-kpi-val">{{ dashboardData.stats.ai_report_count }}</div>
                             </div>
                             <div class="up-kpi-box">
-                                <div class="up-kpi-label">自选追踪标的</div>
+                                <div class="up-kpi-label">{{ uiText('trackedCount') }}</div>
                                 <div class="up-kpi-val">{{ dashboardData.stats.watchlist_count }}</div>
                             </div>
                         </div>
 
                         <div class="up-card">
-                            <div class="up-header">智能投资画像</div>
+                            <div class="up-header">{{ uiText('aiProfileTitle') }}</div>
                             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                                <span class="up-tag">风险偏好：{{ dashboardData.ai_profile.risk_preference }}</span>
-                                <span class="up-tag" style="color: #c084fc; border-color: rgba(192,132,252,0.5); background: rgba(192,132,252,0.1);">交易风格：{{ dashboardData.ai_profile.trading_style }}</span>
+                                <span class="up-tag">{{ uiText('riskPreferenceTag') }}: {{ profileField('risk_preference') }}</span>
+                                <span class="up-tag" style="color: #c084fc; border-color: rgba(192,132,252,0.5); background: rgba(192,132,252,0.1);">{{ uiText('tradingStyleTag') }}: {{ profileField('trading_style') }}</span>
                             </div>
                             <div style="font-size: 13px; color: var(--text-soft); line-height: 1.6; font-style: italic; margin-bottom: 15px; background: var(--panel-strong); padding: 10px; border-radius: 4px; border-left: 3px solid var(--active);">
-                                {{ dashboardData.ai_profile.ai_notes }}
+                                {{ profileField('ai_notes') }}
                             </div>
                             <div id="radarChart" style="width: 100%; height: 220px;"></div>
                         </div>
 
                         <div class="up-card">
-                            <div class="up-header">核心参数设置</div>
+                            <div class="up-header">{{ uiText('coreSettingsTitle') }}</div>
                             <div class="up-setting-row">
-                                <span>回测默认滑点</span>
+                                <span>{{ uiText('defaultSlippage') }}</span>
                                 <span style="font-family: Consolas; color: var(--down);">{{ dashboardData.settings.default_slippage }}</span>
                             </div>
                             <div class="up-setting-row">
-                                <span>回测默认佣金</span>
+                                <span>{{ uiText('defaultCommission') }}</span>
                                 <span style="font-family: Consolas; color: var(--down);">{{ dashboardData.settings.default_commission }}</span>
                             </div>
                             <div class="up-setting-row">
                                 <span>界面主题</span>
                                 <div style="display:flex; align-items:center; gap:10px;">
                                     <span id="theme-setting-value" style="color: var(--text-muted);">黑夜</span>
-                                    <button class="theme-toggle-btn" onclick="toggleTheme()">切换主题</button>
+                                    <button class="theme-toggle-btn" id="theme-toggle-settings-btn" onclick="toggleTheme()">切换主题</button>
+                                </div>
+                            </div>
+                            <div class="up-setting-row">
+                                <span id="language-setting-label">界面语言</span>
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <span id="language-setting-value" style="color: var(--text-muted);">中文</span>
+                                    <button class="theme-toggle-btn" id="language-toggle-settings-btn" onclick="toggleLanguage()">切换语言</button>
                                 </div>
                             </div>
 
                             <div style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 15px;">
-                                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">专属行情令牌（覆盖系统默认）</div>
-                                <input type="password" placeholder="填写专属令牌以提升速度" style="width: 100%; background: var(--input-bg); border: 1px solid var(--border-strong); color: var(--text-strong); padding: 8px 12px; border-radius: 4px; font-family: Consolas; font-size:13px;">
+                                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">{{ uiText('marketTokenLabel') }}</div>
+                                <input type="password" :placeholder="uiText('marketTokenPh')" style="width: 100%; background: var(--input-bg); border: 1px solid var(--border-strong); color: var(--text-strong); padding: 8px 12px; border-radius: 4px; font-family: Consolas; font-size:13px;">
                             </div>
 
                             <div style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 18px;">
-                                <div style="font-size: 14px; color: var(--text-strong); margin-bottom: 12px; font-weight: bold;">修改登录密码</div>
+                                <div style="font-size: 14px; color: var(--text-strong); margin-bottom: 12px; font-weight: bold;">{{ uiText('changePasswordTitle') }}</div>
                                 <div style="display: grid; gap: 10px;">
-                                    <input type="password" class="setting-input" v-model="passwordForm.current_password" placeholder="当前密码">
-                                    <input type="password" class="setting-input" v-model="passwordForm.new_password" placeholder="新密码（6-64 位）">
-                                    <input type="password" class="setting-input" v-model="passwordForm.confirm_password" placeholder="确认新密码">
+                                    <input type="password" class="setting-input" v-model="passwordForm.current_password" :placeholder="uiText('currentPasswordPh')">
+                                    <input type="password" class="setting-input" v-model="passwordForm.new_password" :placeholder="uiText('newPasswordPh')">
+                                    <input type="password" class="setting-input" v-model="passwordForm.confirm_password" :placeholder="uiText('confirmPasswordPh')">
                                     <div style="display:flex; gap:10px; align-items:center;">
-                                        <button class="setting-btn" @click="submitPasswordChange">确认修改</button>
-                                        <button class="setting-btn secondary" @click="resetPasswordForm">清空</button>
+                                        <button class="setting-btn" @click="submitPasswordChange">{{ uiText('confirmAction') }}</button>
+                                        <button class="setting-btn secondary" @click="resetPasswordForm">{{ uiText('resetAction') }}</button>
                                     </div>
                                     <div v-if="passwordMsg.text" :style="{ color: passwordMsg.type === 'success' ? 'var(--success)' : 'var(--danger)', fontSize: '12px' }">{{ passwordMsg.text }}</div>
                                 </div>
@@ -531,18 +762,18 @@
                         <div class="dash-tab" id="dash-tab-btn-backtest" onclick="switchDashTab('backtest')">策略回测</div>
                     </div>
                     <div class="dash-actions">
-                        <button class="dash-btn btn-ai" onclick="dashTriggerAI()">智能诊断</button>
-                        <button class="dash-btn btn-risk" onclick="dashTriggerCRO()">风控诊断</button>
-                        <button class="dash-btn btn-watch" onclick="dashLoadReportHistory()">历史研报</button>
+                        <button class="dash-btn btn-ai" id="dash-btn-ai" onclick="dashTriggerAI()">智能诊断</button>
+                        <button class="dash-btn btn-risk" id="dash-btn-risk" onclick="dashTriggerCRO()">风控诊断</button>
+                        <button class="dash-btn btn-watch" id="dash-btn-history" onclick="dashLoadReportHistory()">历史研报</button>
                         <button class="dash-btn btn-watch" id="dash-btn-watch" onclick="dashToggleWatchlist()">加入自选</button>
-                        <button class="dash-btn btn-trade" onclick="toggleTradePanel()">模拟建仓</button>
+                        <button class="dash-btn btn-trade" id="dash-btn-trade" onclick="toggleTradePanel()">模拟建仓</button>
 
                         <div class="trade-panel" id="trade-panel">
-                            <b style="color: var(--text-strong); font-size: 14px;">录入建仓信息</b>
+                            <b style="color: var(--text-strong); font-size: 14px;" id="dash-trade-title">录入建仓信息</b>
                             <div class="trade-inputs">
                                 <input type="number" id="dash-trade-price" placeholder="买入均价" step="0.01">
                                 <input type="number" id="dash-trade-vol" placeholder="买入数量（股）" step="100">
-                                <button class="dash-btn btn-trade" style="padding: 8px 15px; width: 100%; justify-content:center;" onclick="dashSubmitTrade()">确认建仓</button>
+                                <button class="dash-btn btn-trade" id="dash-trade-confirm" style="padding: 8px 15px; width: 100%; justify-content:center;" onclick="dashSubmitTrade()">确认建仓</button>
                                 <div id="dash-trade-msg" style="font-size: 12px; text-align:center; height:16px;"></div>
                             </div>
                         </div>
@@ -563,13 +794,13 @@
                                 <option value="macd_trend">平滑异同均线动能跟随（金叉）</option>
                                 <option value="rsi_reversion">相对强弱指标超卖反弹（跌破三十）</option>
                             </select>
-                            <button class="dash-btn btn-trade" style="background:var(--highlight); color:var(--panel-strong); border:none; padding: 6px 15px;" onclick="dashRunBacktest()">开始回测</button>
+                            <button class="dash-btn btn-trade" id="dash-bt-run-btn" style="background:var(--highlight); color:var(--panel-strong); border:none; padding: 6px 15px;" onclick="dashRunBacktest()">开始回测</button>
                         </div>
                         <div class="bt-kpi-grid">
-                            <div class="bt-kpi-card"><div class="bt-kpi-title">策略净收益</div><div class="bt-kpi-value" id="dash-kpi-strat">--%</div></div>
-                            <div class="bt-kpi-card"><div class="bt-kpi-title">个股自然收益</div><div class="bt-kpi-value" id="dash-kpi-stock">--%</div></div>
-                            <div class="bt-kpi-card"><div class="bt-kpi-title">交易胜率</div><div class="bt-kpi-value" id="dash-kpi-win" style="color:var(--text-muted);">--%</div></div>
-                            <div class="bt-kpi-card"><div class="bt-kpi-title">最大回撤</div><div class="bt-kpi-value" id="dash-kpi-drawdown" style="color:var(--up);">--%</div></div>
+                            <div class="bt-kpi-card"><div class="bt-kpi-title" id="dash-kpi-title-strat">策略净收益</div><div class="bt-kpi-value" id="dash-kpi-strat">--%</div></div>
+                            <div class="bt-kpi-card"><div class="bt-kpi-title" id="dash-kpi-title-stock">个股自然收益</div><div class="bt-kpi-value" id="dash-kpi-stock">--%</div></div>
+                            <div class="bt-kpi-card"><div class="bt-kpi-title" id="dash-kpi-title-win">交易胜率</div><div class="bt-kpi-value" id="dash-kpi-win" style="color:var(--text-muted);">--%</div></div>
+                            <div class="bt-kpi-card"><div class="bt-kpi-title" id="dash-kpi-title-drawdown">最大回撤</div><div class="bt-kpi-value" id="dash-kpi-drawdown" style="color:var(--up);">--%</div></div>
                         </div>
                         <div class="bt-chart-box">
                             <div id="dash-bt-chart" style="width: 100%; height: 100%;"></div>
@@ -610,7 +841,7 @@
     const API_BASE = "http://127.0.0.1:8000/api";
     let watchlist = [], portfolioList = [];
     let currentTab = 'watchlist';
-    let dashCurrentCode = '', dashCurrentName = '';
+    let dashCurrentCode = '', dashCurrentName = '', dashCurrentNameEn = '';
     let globalSearchTimer = null;
     let dashKlineChart = null, dashBtChart = null;
 
@@ -649,6 +880,7 @@
                     const nextAvatar = profile.avatar_url || localSavedAvatar || getDefaultAvatar(profile.username || authUser || '访客');
                     currentAvatarUrl.value = nextAvatar;
                     localStorage.setItem('eq_avatar', nextAvatar);
+                    applyLanguage(dashboardData.value.settings?.language || localStorage.getItem(LANG_KEY) || 'zh-CN');
                     applyTheme(dashboardData.value.settings?.theme || localStorage.getItem('eq_theme') || 'night');
                     syncTopbarProfile(profile);
                     loading.value = false;
@@ -664,7 +896,7 @@
                 let chart = echarts.getInstanceByDom(chartDom) || echarts.init(chartDom);
                 chart.setOption({
                     radar: {
-                        indicator: radarData.map(item => ({ name: item.category, max: 100 })),
+                        indicator: radarData.map(item => ({ name: getLocalizedField(item, 'category', item.category), max: 100 })),
                         axisName: { color: '#94a3b8', fontSize: 11 },
                         splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
                         splitArea: { show: false },
@@ -687,7 +919,7 @@
                 if (!file) return;
 
                 if (file.size > 2 * 1024 * 1024) {
-                    uploadMsg.value = "图片过大，请控制在 2 兆以内";
+                    uploadMsg.value = t('imageTooLarge');
                     setTimeout(() => uploadMsg.value = "", 3000);
                     return;
                 }
@@ -695,7 +927,7 @@
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     const base64Data = e.target.result;
-                    uploadMsg.value = "正在保存头像...";
+                    uploadMsg.value = t('loadingAvatar');
                     try {
                         const res = await fetch(`${API_BASE}/user/profile/avatar`, {
                             method: 'POST',
@@ -704,7 +936,7 @@
                         });
                         const data = await res.json();
                         if (!res.ok) {
-                            throw new Error(data.detail || '头像保存失败');
+                            throw new Error(data.detail || t('avatarFailed'));
                         }
                         currentAvatarUrl.value = data.avatar_url;
                         localStorage.setItem('eq_avatar', data.avatar_url);
@@ -715,9 +947,9 @@
                             username: dashboardData.value?.basic_info?.username || authUser || '访客',
                             avatar_url: data.avatar_url
                         });
-                        uploadMsg.value = "头像已保存";
+                        uploadMsg.value = t('avatarSaved');
                     } catch (error) {
-                        uploadMsg.value = error.message || "头像保存失败";
+                        uploadMsg.value = error.message || t('avatarFailed');
                     }
                     setTimeout(() => uploadMsg.value = "", 3000);
                 };
@@ -732,14 +964,14 @@
             const submitPasswordChange = async () => {
                 const form = passwordForm.value;
                 if (!form.current_password || !form.new_password || !form.confirm_password) {
-                    passwordMsg.value = { type: 'error', text: '请完整填写当前密码、新密码和确认密码' };
+                    passwordMsg.value = { type: 'error', text: t('passwordRequired') };
                     return;
                 }
                 if (form.new_password !== form.confirm_password) {
-                    passwordMsg.value = { type: 'error', text: '两次输入的新密码不一致' };
+                    passwordMsg.value = { type: 'error', text: t('passwordMismatch') };
                     return;
                 }
-                passwordMsg.value = { type: 'success', text: '正在提交修改...' };
+                passwordMsg.value = { type: 'success', text: t('passwordSubmitting') };
                 try {
                     const res = await fetch(`${API_BASE}/user/password/change`, {
                         method: 'POST',
@@ -751,23 +983,25 @@
                     });
                     const data = await res.json();
                     if (!res.ok) {
-                        throw new Error(data.detail || data.message || '密码修改失败');
+                        throw new Error(data.detail || data.message || t('passwordFailed'));
                     }
                     resetPasswordForm();
-                    passwordMsg.value = { type: 'success', text: data.message || '密码修改成功，请重新登录' };
+                    passwordMsg.value = { type: 'success', text: currentLanguage === 'en-US' ? t('passwordSaved') : (data.message || t('passwordSaved')) };
                     setTimeout(() => logout(), 900);
                 } catch (error) {
-                    passwordMsg.value = { type: 'error', text: error.message || '密码修改失败' };
+                    passwordMsg.value = { type: 'error', text: error.message || t('passwordFailed') };
                 }
             };
 
             window.triggerFetchUserData = fetchUserData;
 
             const formatPercent = (value) => `${value > 0 ? "+" : ""}${Number(value || 0).toFixed(2)}%`;
+            const uiText = (key) => t(key);
+            const profileField = (key) => getLocalizedField(dashboardData.value?.ai_profile || {}, key, '');
             return {
                 loading, dashboardData, currentAvatarUrl, uploadMsg,
                 handleFileUpload, formatPercent, passwordForm, passwordMsg,
-                submitPasswordChange, resetPasswordForm
+                submitPasswordChange, resetPasswordForm, uiText, profileField, currentLanguage
             };
         }
     });
@@ -776,7 +1010,7 @@
 
     // ================== AI 逻辑 ==================
     function clearChat() {
-        document.getElementById('chat-history').innerHTML = '<div class="chat-msg system-msg">--- 面板已清空 ---</div>';
+        document.getElementById('chat-history').innerHTML = `<div class="chat-msg system-msg">--- ${currentLanguage === 'en-US' ? 'Panel cleared' : '面板已清空'} ---</div>`;
     }
 
     function appendMessage(role, text) {
@@ -797,8 +1031,8 @@
         if (!presetText) inputEl.value = '';
 
         const btn = document.getElementById('send-btn');
-        btn.disabled = true; btn.innerText = '思考中...';
-        const msgEl = appendMessage('agent', '正在接通数据通道...');
+        btn.disabled = true; btn.innerText = currentLanguage === 'en-US' ? 'Thinking...' : '思考中...';
+        const msgEl = appendMessage('agent', currentLanguage === 'en-US' ? 'Connecting data channels...' : '正在接通数据通道...');
         const historyEl = document.getElementById('chat-history');
         let accumulatedText = "";
 
@@ -828,40 +1062,48 @@
                             else if (parsedData.type === 'progress') { accumulatedText += parsedData.content + "\n"; msgEl.innerText = accumulatedText; }
                             else if (parsedData.type === 'backtest') { accumulatedText += "\n" + parsedData.content + "\n"; msgEl.innerText = accumulatedText; }
                             else if (parsedData.type === 'final_report') { accumulatedText = parsedData.content; msgEl.innerHTML = marked.parse(accumulatedText); }
-                            else if (parsedData.type === 'error') { msgEl.innerText += "\n\n提示：" + parsedData.content; msgEl.style.color = '#f03c50'; }
+                            else if (parsedData.type === 'error') { msgEl.innerText += "\n\n" + (currentLanguage === 'en-US' ? 'Notice: ' : '提示：') + parsedData.content; msgEl.style.color = '#f03c50'; }
                         } catch(e) {}
                     }
                 }
                 historyEl.scrollTop = historyEl.scrollHeight;
             }
             if (accumulatedText) msgEl.innerHTML = marked.parse(accumulatedText);
-        } catch (e) { msgEl.innerText = '网络连接中断，请稍后重试'; msgEl.style.color = '#f03c50'; }
-        finally { btn.disabled = false; btn.innerText = '发送'; historyEl.scrollTop = historyEl.scrollHeight; }
+        } catch (e) { msgEl.innerText = currentLanguage === 'en-US' ? 'Network connection interrupted. Please try again later.' : '网络连接中断，请稍后重试'; msgEl.style.color = '#f03c50'; }
+        finally { btn.disabled = false; btn.innerText = currentLanguage === 'en-US' ? 'Send' : '发送'; historyEl.scrollTop = historyEl.scrollHeight; }
     }
 
     function triggerAI(ts_code, name) {
-        const prompt = `请帮我生成一份关于【${name}】(${ts_code}) 的深度诊断研报。`;
+        const prompt = currentLanguage === 'en-US'
+            ? `Please generate a deep diagnostic report on [${name}] (${ts_code}). Reply in English only.`
+            : `请帮我生成一份关于【${name}】(${ts_code}) 的深度诊断研报。`;
         appendMessage('user', prompt); sendChatMessage(prompt, true);
     }
     function dashTriggerAI() {
         if(!dashCurrentCode) return;
-        appendMessage('agent', `📊 **接收指令**：对当前视窗内标的【${dashCurrentName}】进行全息扫描...`);
-        triggerAI(dashCurrentCode, dashCurrentName);
+        const localizedName = currentLanguage === 'en-US' ? (dashCurrentNameEn || dashCurrentName || dashCurrentCode) : (dashCurrentName || dashCurrentNameEn || dashCurrentCode);
+        appendMessage('agent', currentLanguage === 'en-US' ? `📊 **Instruction received**: scanning [${localizedName}] across the full stack...` : `📊 **接收指令**：对当前视窗内标的【${localizedName}】进行全息扫描...`);
+        triggerAI(dashCurrentCode, localizedName);
     }
     function dashTriggerCRO() {
         if(!dashCurrentCode) return;
-        const prompt = `请作为风控总监，帮我进行持仓诊断。分析我当前持有的【${dashCurrentName}】(${dashCurrentCode}) 是否需要平仓或加仓。`;
+        const localizedName = currentLanguage === 'en-US' ? (dashCurrentNameEn || dashCurrentName || dashCurrentCode) : (dashCurrentName || dashCurrentNameEn || dashCurrentCode);
+        const prompt = currentLanguage === 'en-US'
+            ? `Act as a risk director and assess my holding in [${localizedName}] (${dashCurrentCode}). Tell me whether I should reduce, exit, or add, and reply in English only.`
+            : `请作为风控总监，帮我进行持仓诊断。分析我当前持有的【${localizedName}】(${dashCurrentCode}) 是否需要平仓或加仓。`;
         appendMessage('user', prompt);
-        appendMessage('agent', `🛡️ **调用风控中枢**：调取持仓成本线与实时价对比模型...`);
+        appendMessage('agent', currentLanguage === 'en-US' ? `🛡️ **Risk engine engaged**: comparing cost basis with the live market...` : `🛡️ **调用风控中枢**：调取持仓成本线与实时价对比模型...`);
         sendChatMessage(prompt, true);
     }
     function triggerPortfolioAI(ts_code, name) {
         dashCurrentCode = ts_code;
         dashCurrentName = name;
         currentTab = 'portfolio';
-        const prompt = `请作为风控总监，帮我进行持仓诊断。分析我当前持有的【${name}】(${ts_code}) 是否需要平仓或加仓。`;
+        const prompt = currentLanguage === 'en-US'
+            ? `Act as a risk director and assess my holding in [${name}] (${ts_code}). Tell me whether I should reduce, exit, or add, and reply in English only.`
+            : `请作为风控总监，帮我进行持仓诊断。分析我当前持有的【${name}】(${ts_code}) 是否需要平仓或加仓。`;
         appendMessage('user', prompt);
-        appendMessage('agent', `🛡️ **调用风控中枢**：正在分析【${name}】的持仓风险...`);
+        appendMessage('agent', currentLanguage === 'en-US' ? `🛡️ **Risk engine engaged**: analyzing the holding risk of [${name}]...` : `🛡️ **调用风控中枢**：正在分析【${name}】的持仓风险...`);
         sendChatMessage(prompt, true);
     }
     function toggleHistoryReport(recordId) {
@@ -874,7 +1116,7 @@
     }
 
     async function deleteHistoryReport(recordId) {
-        if (!confirm('确定删除这条历史研报吗？')) return;
+        if (!confirm(t('deleteReportConfirm'))) return;
         try {
             const res = await fetch(`${API_BASE}/market/diagnostics/history/${recordId}`, {
                 method: 'DELETE',
@@ -883,13 +1125,13 @@
             if (res.status === 401) { logout(); return; }
             const data = await res.json();
             if (!res.ok || data.code !== 200) {
-                alert(data.msg || data.detail || '删除失败');
+                alert(data.msg || data.detail || t('loadFailed'));
                 return;
             }
             const cardEl = document.getElementById(`report-card-${recordId}`);
             if (cardEl) cardEl.remove();
         } catch (e) {
-            alert('删除失败');
+            alert(t('loadFailed'));
         }
     }
 
@@ -898,7 +1140,7 @@
         const historyEl = document.getElementById('chat-history');
         const msgDiv = document.createElement('div');
         msgDiv.className = 'chat-msg agent-msg';
-        msgDiv.innerText = '正在加载历史研报...';
+        msgDiv.innerText = t('historyLoading');
         historyEl.appendChild(msgDiv);
         historyEl.scrollTop = historyEl.scrollHeight;
         try {
@@ -908,26 +1150,26 @@
             if (res.status === 401) { logout(); return; }
             const data = await res.json();
             if (!res.ok || data.code !== 200) {
-                msgDiv.innerText = data.msg || data.detail || '历史研报加载失败';
+                msgDiv.innerText = data.msg || data.detail || t('historyFailed');
                 msgDiv.style.color = '#f03c50';
                 return;
             }
             if (!data.data || data.data.length === 0) {
-                msgDiv.innerHTML = `<p><b>历史研报</b></p><p>当前股票暂无历史研报记录。</p>`;
+                msgDiv.innerHTML = `<p><b>${t('historyTitle')}</b></p><p>${t('historyEmpty')}</p>`;
                 return;
             }
             msgDiv.innerHTML = `
-                <p><b>历史研报</b> ${dashCurrentName}（${dashCurrentCode}）</p>
+                <p><b>${t('historyTitle')}</b> ${dashCurrentName} (${dashCurrentCode})</p>
                 ${data.data.map((item, index) => {
                     const preview = (item.report_content || '').slice(0, 160);
-                    const fullContent = (item.report_content || '') || '暂无内容';
+                    const fullContent = (item.report_content || '') || (currentLanguage === 'en-US' ? 'No content' : '暂无内容');
                     return `
                         <div id="report-card-${item.id}" style="margin-top:12px; padding:12px; border-radius:10px; background:var(--panel-strong); border:1px solid var(--border-strong);">
                             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px;">
-                                <div style="font-size:12px; color:var(--text-muted);">第 ${index + 1} 份 · ${item.created_at || '--'}</div>
+                                <div style="font-size:12px; color:var(--text-muted);">${currentLanguage === 'en-US' ? `Report ${index + 1}` : `第 ${index + 1} 份`} · ${item.created_at || '--'}</div>
                                 <div style="display:flex; gap:8px;">
-                                    <button id="report-toggle-${item.id}" onclick="toggleHistoryReport('${item.id}')" style="background:transparent; color:var(--text-muted); border:1px solid var(--border-strong); padding:4px 10px; border-radius:6px; cursor:pointer;">展开</button>
-                                    <button onclick="deleteHistoryReport('${item.id}')" style="background:rgba(240,60,80,0.12); color:var(--down); border:1px solid rgba(240,60,80,0.22); padding:4px 10px; border-radius:6px; cursor:pointer;">删除</button>
+                                    <button id="report-toggle-${item.id}" onclick="toggleHistoryReport('${item.id}')" style="background:transparent; color:var(--text-muted); border:1px solid var(--border-strong); padding:4px 10px; border-radius:6px; cursor:pointer;">${t('expandAction')}</button>
+                                    <button onclick="deleteHistoryReport('${item.id}')" style="background:rgba(240,60,80,0.12); color:var(--down); border:1px solid rgba(240,60,80,0.22); padding:4px 10px; border-radius:6px; cursor:pointer;">${t('deleteAction')}</button>
                                 </div>
                             </div>
                             <div style="font-size:13px; color:var(--text-muted); line-height:1.7;">${preview}${(item.report_content || '').length > 160 ? '...' : ''}</div>
@@ -937,7 +1179,7 @@
                 }).join('')}
             `;
         } catch (e) {
-            msgDiv.innerText = '历史研报加载失败';
+            msgDiv.innerText = t('historyFailed');
             msgDiv.style.color = '#f03c50';
         } finally {
             historyEl.scrollTop = historyEl.scrollHeight;
@@ -957,13 +1199,13 @@
                 const res = await fetch(`${API_BASE}/market/search?keyword=${encodeURIComponent(keyword)}`, { headers: getAuthHeaders() }).then(r => r.json());
                 if (res.code === 200 && res.data.length > 0) {
                     globalSearchDropdown.innerHTML = res.data.map(s => `
-                        <div class="search-item" onmousedown="openDashboard('${s.ts_code}', '${s.name}')">
-                            <span>${s.name}</span><span class="search-item-code">${s.ts_code}</span>
+                        <div class="search-item" onmousedown='openDashboard(${JSON.stringify(s.ts_code)}, ${JSON.stringify(s.name)}, ${JSON.stringify(s.name_en || "")})'>
+                            <span>${escapeHTML(getLocalizedField(s, 'name', s.name || '--'))}</span><span class="search-item-code">${s.ts_code}</span>
                         </div>
                     `).join('');
                     globalSearchDropdown.style.display = 'block';
                 } else {
-                    globalSearchDropdown.innerHTML = `<div style="padding:15px; color:#666; font-size:13px;">未找到匹配结果</div>`;
+                    globalSearchDropdown.innerHTML = `<div style="padding:15px; color:#666; font-size:13px;">${t('noResult')}</div>`;
                     globalSearchDropdown.style.display = 'block';
                 }
             } catch(e) {}
@@ -984,8 +1226,8 @@
         }, 10);
     }
 
-    function openDashboard(ts_code, name) {
-        dashCurrentCode = ts_code; dashCurrentName = name;
+    function openDashboard(ts_code, name, nameEn = '') {
+        dashCurrentCode = ts_code; dashCurrentName = name; dashCurrentNameEn = nameEn || '';
         globalSearchInput.value = ''; globalSearchDropdown.style.display = 'none';
 
         document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
@@ -993,14 +1235,14 @@
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
         switchDashTab('kline');
 
-        document.getElementById('dash-name').innerText = name;
+        document.getElementById('dash-name').innerText = currentLanguage === 'en-US' ? (dashCurrentNameEn || name || ts_code) : (name || dashCurrentNameEn || ts_code);
         document.getElementById('dash-code').innerText = ts_code;
         document.getElementById('dash-price').innerText = '0.00';
         document.getElementById('dash-pct').innerText = '0.00%';
 
         const isWatched = watchlist.some(s => s.ts_code === ts_code);
         const watchBtn = document.getElementById('dash-btn-watch');
-        watchBtn.innerHTML = isWatched ? '已加入自选' : '加入自选';
+        watchBtn.innerHTML = isWatched ? t('watched') : t('addWatchlist');
         watchBtn.style.color = isWatched ? '#facc15' : 'var(--text-muted)';
         watchBtn.style.borderColor = isWatched ? 'var(--highlight)' : 'var(--border-strong)';
 
@@ -1051,11 +1293,11 @@
                 drawKlineChart(res.data);
             } else {
                 document.getElementById('dash-kline-loading').style.display = 'block';
-                document.getElementById('dash-kline-loading').innerText = '暂无K线数据';
+                document.getElementById('dash-kline-loading').innerText = t('noKline');
             }
         } catch(e) {
             document.getElementById('dash-kline-loading').style.display = 'block';
-            document.getElementById('dash-kline-loading').innerText = '加载失败';
+            document.getElementById('dash-kline-loading').innerText = t('loadFailed');
         }
     }
 
@@ -1075,8 +1317,8 @@
             yAxis: [{ scale: true, position: 'right', splitLine: { lineStyle: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() } }, axisLabel: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim(), fontSize: 10 } }, { gridIndex: 1, splitNumber: 2, axisLabel: { show: false }, splitLine: { show: false } }],
             dataZoom: [ { type: 'inside', xAxisIndex: [0, 1], start: 40, end: 100 } ],
             series: [
-                { name: 'K线', type: 'candlestick', data: values, itemStyle: { color: '#f03c50', color0: '#1ebd60', borderColor: '#f03c50', borderColor0: '#1ebd60' } },
-                { name: '成交量', type: 'bar', xAxisIndex: 1, yAxisIndex: 1, data: volumes, itemStyle: { color: function(p) { return p.data[2] === 1 ? '#f03c50' : '#1ebd60'; } } }
+                { name: t('klineSeries'), type: 'candlestick', data: values, itemStyle: { color: '#f03c50', color0: '#1ebd60', borderColor: '#f03c50', borderColor0: '#1ebd60' } },
+                { name: t('volumeSeries'), type: 'bar', xAxisIndex: 1, yAxisIndex: 1, data: volumes, itemStyle: { color: function(p) { return p.data[2] === 1 ? '#f03c50' : '#1ebd60'; } } }
             ]
         });
     }
@@ -1095,22 +1337,22 @@
         }
         data = await res.json();
         if (!res.ok || data.code !== 200) {
-            alert(data.msg || data.detail || (isWatched ? '移除自选失败' : '加入自选失败'));
+            alert(data.msg || data.detail || (isWatched ? t('removeWatchlistFailed') : t('addWatchlistFailed')));
             return;
         }
-        await loadWatchlist(); openDashboard(dashCurrentCode, dashCurrentName);
+        await loadWatchlist(); openDashboard(dashCurrentCode, dashCurrentName, dashCurrentNameEn);
     }
 
     async function dashSubmitTrade() {
         const buy_price = parseFloat(document.getElementById('dash-trade-price').value);
         const volume = parseInt(document.getElementById('dash-trade-vol').value);
         const msgEl = document.getElementById('dash-trade-msg');
-        if (!buy_price || !volume || buy_price <= 0 || volume <= 0) { msgEl.innerText = "请输入有效的价格和数量"; msgEl.style.color = '#f03c50'; return; }
+        if (!buy_price || !volume || buy_price <= 0 || volume <= 0) { msgEl.innerText = t('invalidTrade'); msgEl.style.color = '#f03c50'; return; }
 
-        msgEl.innerText = "正在提交..."; msgEl.style.color = '#6b7280';
+        msgEl.innerText = t('submitting'); msgEl.style.color = '#6b7280';
         const res = await fetch(`${API_BASE}/portfolio/buy`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ ts_code: dashCurrentCode, stock_name: dashCurrentName, buy_price, volume }) }).then(r => r.json());
         if (res.code === 200) {
-            msgEl.innerText = "建仓成功"; msgEl.style.color = 'var(--up)';
+            msgEl.innerText = t('buySuccess'); msgEl.style.color = 'var(--up)';
             loadPortfolio(); setTimeout(()=> toggleTradePanel(), 1000);
         } else { msgEl.innerText = `⚠️ ${res.msg}`; msgEl.style.color = '#f03c50'; }
     }
@@ -1119,7 +1361,7 @@
         if(!dashCurrentCode) return;
         const strategyValue = document.getElementById('dash-bt-strategy').value;
         document.getElementById('dash-bt-placeholder').style.display = 'block';
-        document.getElementById('dash-bt-placeholder').innerText = '⚙️ 引擎运算中...';
+        document.getElementById('dash-bt-placeholder').innerText = t('backtestRunning');
 
         try {
             const res = await fetch(`${API_BASE}/backtest/run?ts_code=${dashCurrentCode}&strategy=${strategyValue}`, { headers: getAuthHeaders() }).then(r => r.json());
@@ -1136,23 +1378,26 @@
                 if(dashBtChart) dashBtChart.dispose();
                 dashBtChart = echarts.init(chartDom);
                 dashBtChart.setOption({
-                    backgroundColor: 'transparent', tooltip: { trigger: 'axis' }, legend: { data: ['策略净值', '基准收益'], textStyle: { color: '#9ca3af' } },
+                    backgroundColor: 'transparent', tooltip: { trigger: 'axis' }, legend: { data: [t('strategySeries'), t('benchmarkSeries')], textStyle: { color: '#9ca3af' } },
                     grid: { left: '1%', right: '2%', bottom: '15%', top:'10%', containLabel: true },
                     xAxis: { type: 'category', boundaryGap: false, data: chartData.dates, axisLabel: { color: '#6b7280' } },
                     yAxis: { type: 'value', min: 'dataMin', position:'right', axisLabel: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() }, splitLine: { lineStyle: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() } } },
                     dataZoom: [{ type: 'inside', start: 0, end: 100 }],
                     series: [
-                        { name: '策略净值', type: 'line', data: chartData.strategy_net, itemStyle: { color: '#facc15' }, lineStyle: { width: 2 }, showSymbol: false },
-                        { name: '基准收益', type: 'line', data: chartData.stock_net, itemStyle: { color: '#2563eb' }, lineStyle: { width: 2, type: 'dashed' }, showSymbol: false }
+                        { name: t('strategySeries'), type: 'line', data: chartData.strategy_net, itemStyle: { color: '#facc15' }, lineStyle: { width: 2 }, showSymbol: false },
+                        { name: t('benchmarkSeries'), type: 'line', data: chartData.stock_net, itemStyle: { color: '#2563eb' }, lineStyle: { width: 2, type: 'dashed' }, showSymbol: false }
                     ]
                 });
 
-                const aiPrompt = `请作为资深研究员，点评我对【${dashCurrentName}】运行的【${stratName}】回测结果。数据：策略收益${sPct}%，基准${bPct}%，胜率${kpi.win_rate}%，最大回撤${kpi.max_drawdown}%。`;
-                appendMessage('agent', `📊 **回测完成：${stratName}**\n已投递数据至评估模型...`);
+                const localizedDashName = currentLanguage === 'en-US' ? (dashCurrentNameEn || dashCurrentName || dashCurrentCode) : (dashCurrentName || dashCurrentNameEn || dashCurrentCode);
+                const aiPrompt = currentLanguage === 'en-US'
+                    ? `Please act as a senior equity researcher and review the backtest result of [${stratName}] on [${localizedDashName}]. Data: strategy return ${sPct}%, benchmark ${bPct}%, win rate ${kpi.win_rate}%, max drawdown ${kpi.max_drawdown}%.`
+                    : `请作为资深研究员，点评我对【${localizedDashName}】运行的【${stratName}】回测结果。数据：策略收益${sPct}%，基准${bPct}%，胜率${kpi.win_rate}%，最大回撤${kpi.max_drawdown}%。`;
+                appendMessage('agent', currentLanguage === 'en-US' ? `📊 **Backtest finished: ${stratName}**\nSubmitted to the evaluation model...` : `📊 **回测完成：${stratName}**\n已投递数据至评估模型...`);
                 sendChatMessage(aiPrompt, true);
 
             } else { document.getElementById('dash-bt-placeholder').innerText = `⚠️ ${res.msg}`; }
-        } catch(e) { document.getElementById('dash-bt-placeholder').innerText = `⚠️ 网络连接异常`; }
+        } catch(e) { document.getElementById('dash-bt-placeholder').innerText = currentLanguage === 'en-US' ? '⚠️ Network error' : '⚠️ 网络连接异常'; }
     }
 
     // ================== 左侧大栏与底层逻辑 ==================
@@ -1215,7 +1460,7 @@
         try {
             const res = await fetch(`${API_BASE}/market/indices`, { headers: getAuthHeaders() }).then(r => r.json());
             if (res.code === 200 && res.data) {
-                document.getElementById('top-ticker-data').innerHTML = res.data.map(i => `<div style="display:flex; gap:6px; align-items:baseline;"><span style="color:var(--text-muted);">${escapeHTML(i.name)}</span><b class="${i.change_pct>=0?'text-up':'text-down'}" style="font-size:14px; font-family:Consolas;">${i.price.toFixed(2)}</b><span class="${i.change_pct>=0?'text-up':'text-down'}" style="font-weight:bold; font-size:12px;">${i.change_pct>0?'+':''}${i.change_pct.toFixed(2)}%</span></div>`).join('');
+                document.getElementById('top-ticker-data').innerHTML = res.data.map(i => `<div style="display:flex; gap:6px; align-items:baseline;"><span style="color:var(--text-muted);">${escapeHTML(getLocalizedField(i, 'name', i.name || '--'))}</span><b class="${i.change_pct>=0?'text-up':'text-down'}" style="font-size:14px; font-family:Consolas;">${i.price.toFixed(2)}</b><span class="${i.change_pct>=0?'text-up':'text-down'}" style="font-weight:bold; font-size:12px;">${i.change_pct>0?'+':''}${i.change_pct.toFixed(2)}%</span></div>`).join('');
             }
         } catch(e) {}
     }
@@ -1227,12 +1472,12 @@
                 watchlist = res.data;
                 const tbody = document.getElementById('table-body');
                 if (watchlist.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 50px; color:#666;">暂无自选记录，请先在顶部搜索后添加</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 50px; color:#666;">${t('emptyWatchlist')}</td></tr>`;
                     return;
                 }
                 tbody.innerHTML = watchlist.map(s => {
                     const id = s.ts_code.replace('.', '-');
-                    return `<tr onclick='openDashboard(${JSON.stringify(s.ts_code)}, ${JSON.stringify(s.stock_name)})'><td class="stock-name">${escapeHTML(s.stock_name)}<br><small style="color:var(--text-muted); font-weight:normal; font-family:Consolas;">${escapeHTML(s.ts_code)}</small></td><td id="spark-${id}"><span style="color:var(--text-muted); font-size:12px;">载入中...</span></td><td id="price-${id}">--</td><td><span class="badge" id="badge-${id}">--</span></td><td id="vol-${id}">--</td><td id="turn-${id}">--</td></tr>`;
+                    return `<tr onclick='openDashboard(${JSON.stringify(s.ts_code)}, ${JSON.stringify(s.stock_name)}, ${JSON.stringify(s.stock_name_en || "")})'><td class="stock-name">${escapeHTML(getLocalizedStockName(s))}<br><small style="color:var(--text-muted); font-weight:normal; font-family:Consolas;">${escapeHTML(s.ts_code)}</small></td><td id="spark-${id}"><span style="color:var(--text-muted); font-size:12px;">${t('loadingTrend')}</span></td><td id="price-${id}">--</td><td><span class="badge" id="badge-${id}">--</span></td><td id="vol-${id}">--</td><td id="turn-${id}">--</td></tr>`;
                 }).join('');
                 pollRealtime(); pollTrends();
             }
@@ -1275,23 +1520,27 @@
             if (res.code === 200) {
                 portfolioList = res.data;
                 const tbody = document.getElementById('portfolio-body');
-                if (portfolioList.length === 0) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 50px; color:#666;">暂无持仓记录</td></tr>`; return; }
-                tbody.innerHTML = portfolioList.map(s => `<tr id="row-port-${s.ts_code.replace('.','-')}" onclick="openDashboard('${s.ts_code}', '${s.stock_name}')"><td class="stock-name">${s.stock_name}<br><small style="color:var(--text-muted); font-family:Consolas;">${s.ts_code}</small></td><td style="color:var(--text-strong);">${s.volume}</td><td style="color:var(--text-muted);">￥${s.avg_price.toFixed(3)}</td><td id="price-port-${s.ts_code.replace('.','-')}">--</td><td id="profit-port-${s.ts_code.replace('.','-')}" style="font-weight:bold;">--</td><td><span class="badge" id="pct-port-${s.ts_code.replace('.','-')}" style="background:var(--border-strong);">0.00%</span></td><td><button onclick="event.stopPropagation(); triggerPortfolioAI('${s.ts_code}','${s.stock_name}')" style="color:var(--up); background:rgba(240,60,80,0.15); border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">诊断</button> <button onclick="event.stopPropagation(); sellPortfolio('${s.ts_code}')" style="color:var(--text-muted); background:transparent; border:1px solid var(--border-strong); padding:4px 10px; border-radius:4px; cursor:pointer; margin-left:8px;">平仓</button></td></tr>`).join('');
+                if (portfolioList.length === 0) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 50px; color:#666;">${t('emptyPortfolio')}</td></tr>`; return; }
+                tbody.innerHTML = portfolioList.map(s => {
+                    const localizedName = getLocalizedStockName(s);
+                    const rowId = s.ts_code.replace('.', '-');
+                    return `<tr id="row-port-${rowId}" onclick='openDashboard(${JSON.stringify(s.ts_code)}, ${JSON.stringify(s.stock_name)}, ${JSON.stringify(s.stock_name_en || "")})'><td class="stock-name">${escapeHTML(localizedName)}<br><small style="color:var(--text-muted); font-family:Consolas;">${escapeHTML(s.ts_code)}</small></td><td style="color:var(--text-strong);">${s.volume}</td><td style="color:var(--text-muted);">￥${s.avg_price.toFixed(3)}</td><td id="price-port-${rowId}">--</td><td id="profit-port-${rowId}" style="font-weight:bold;">--</td><td><span class="badge" id="pct-port-${rowId}" style="background:var(--border-strong);">0.00%</span></td><td><button onclick="event.stopPropagation(); triggerPortfolioAI(${JSON.stringify(s.ts_code)}, ${JSON.stringify(localizedName)})" style="color:var(--up); background:rgba(240,60,80,0.15); border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">${t('diagnosis')}</button> <button onclick="event.stopPropagation(); sellPortfolio('${s.ts_code}')" style="color:var(--text-muted); background:transparent; border:1px solid var(--border-strong); padding:4px 10px; border-radius:4px; cursor:pointer; margin-left:8px;">${t('closePosition')}</button></td></tr>`;
+                }).join('');
                 pollPortfolioRealtime();
             }
         } catch(e) {}
     }
 
     async function sellPortfolio(ts_code) {
-        if (!confirm(`确定要清仓抛出 ${ts_code} 吗？`)) return;
+        if (!confirm(tf('closePositionConfirm', { code: ts_code }))) return;
         try {
             const res = await fetch(`${API_BASE}/portfolio/sell?ts_code=${encodeURIComponent(ts_code)}`, {method: 'POST', headers: getAuthHeaders() }).then(r => r.json());
             if (res.code === 200) {
                 const row = document.getElementById(`row-port-${ts_code.replace('.','-')}`);
                 if (row) row.remove();
                 loadPortfolio();
-            } else { alert(`平仓失败：${res.msg}`); }
-        } catch(e) { alert(`网络异常，请求失败`); }
+            } else { alert(tf('sellFailed', { msg: res.msg })); }
+        } catch(e) { alert(t('requestFailed')); }
     }
 
     async function pollPortfolioRealtime() {
@@ -1320,7 +1569,7 @@
         try {
             const res = await fetch(`${API_BASE}/market/hotspots?limit=24`, { headers: getAuthHeaders() }).then(r => r.json());
             if (res.code === 200 && res.data && res.data.length > 0) {
-                grid.innerHTML = res.data.map(item => `<div class="hotspot-card"><div class="hc-header"><span class="hc-name">${item.sector_name}</span><span class="badge ${item.change_pct >= 0 ? 'bg-up' : 'bg-down'}">${item.change_pct > 0 ? '+' : ''}${item.change_pct.toFixed(2)}%</span></div><div class="hc-leader"><span style="color:var(--text-muted)">领涨龙头</span><b style="color:var(--text-strong)">${item.top_stock_name}</b><span class="${item.top_stock_change >= 0 ? 'text-up' : 'text-down'}">${item.top_stock_change > 0 ? '+' : ''}${item.top_stock_change.toFixed(2)}%</span></div></div>`).join('');
+                grid.innerHTML = res.data.map(item => `<div class="hotspot-card"><div class="hc-header"><span class="hc-name">${escapeHTML(getLocalizedField(item, 'sector_name', item.sector_name || '--'))}</span><span class="badge ${item.change_pct >= 0 ? 'bg-up' : 'bg-down'}">${item.change_pct > 0 ? '+' : ''}${item.change_pct.toFixed(2)}%</span></div><div class="hc-leader"><span style="color:var(--text-muted)">${t('hotLeader')}</span><b style="color:var(--text-strong)">${escapeHTML(getLocalizedField(item, 'top_stock_name', item.top_stock_name || '--'))}</b><span class="${item.top_stock_change >= 0 ? 'text-up' : 'text-down'}">${item.top_stock_change > 0 ? '+' : ''}${item.top_stock_change.toFixed(2)}%</span></div></div>`).join('');
             }
         } catch (e) {}
     }

@@ -258,24 +258,27 @@
                 <div class="brand-mark">量</div>
                 <div class="brand-name">量投终端</div>
             </div>
-            <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">切换到白天</button>
+            <div style="display:flex; gap:10px;">
+                <button class="theme-btn" id="lang-btn" onclick="toggleLanguage()">EN</button>
+                <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">切换到白天</button>
+            </div>
         </div>
-        <div class="form-kicker">账号创建</div>
-        <div class="form-title">注册新账号</div>
+        <div class="form-kicker" id="form-kicker">账号创建</div>
+        <div class="form-title" id="form-title">注册新账号</div>
         <div class="tips">
-            <div class="tip">用户名至少 3 个字符</div>
-            <div class="tip">密码至少 6 个字符</div>
+            <div class="tip" id="tip-user">用户名至少 3 个字符</div>
+            <div class="tip" id="tip-pass">密码至少 6 个字符</div>
         </div>
         <div class="input-group">
-            <label for="username">用户名</label>
+            <label for="username" id="username-label">用户名</label>
             <input type="text" id="username" placeholder="请输入用户名" autocomplete="off">
         </div>
         <div class="input-group">
-            <label for="password">密码</label>
+            <label for="password" id="password-label">密码</label>
             <input type="password" id="password" placeholder="请输入密码">
         </div>
-        <button class="btn" onclick="handleRegister()">立即创建账号</button>
-        <div class="link-text">已经有账号？<a href="login.html">返回登录</a></div>
+        <button class="btn" id="submit-btn" onclick="handleRegister()">立即创建账号</button>
+        <div class="link-text"><span id="login-prefix">已经有账号？</span><a href="login.html" id="login-link">返回登录</a></div>
         <div id="message"></div>
     </section>
     <section class="feature-side">
@@ -302,11 +305,58 @@
     </section>
 </div>
 <script>
+    const LANG_KEY = 'eq_lang';
+    const I18N = {
+        'zh-CN': {
+            title: '创建账号', kicker: '账号创建', formTitle: '注册新账号',
+            tipUser: '用户名至少 3 个字符', tipPass: '密码至少 6 个字符',
+            username: '用户名', usernamePh: '请输入用户名', password: '密码', passwordPh: '请输入密码',
+            submit: '立即创建账号', loginPrefix: '已经有账号？', loginLink: '返回登录',
+            themeToDay: '切换到白天', themeToNight: '切换到黑夜',
+            empty: '用户名和密码不能为空', short: '用户名至少 3 个字符，密码至少 6 个字符',
+            creating: '正在创建账号...', fail: '注册失败：', retry: '请稍后重试', network: '网络连接失败，请检查服务是否启动'
+        },
+        'en-US': {
+            title: 'Create Account', kicker: 'Account Setup', formTitle: 'Create your account',
+            tipUser: 'Username must be at least 3 characters', tipPass: 'Password must be at least 6 characters',
+            username: 'Username', usernamePh: 'Enter username', password: 'Password', passwordPh: 'Enter password',
+            submit: 'Create Account', loginPrefix: 'Already have an account? ', loginLink: 'Back to sign in',
+            themeToDay: 'Switch to Light', themeToNight: 'Switch to Dark',
+            empty: 'Username and password are required.', short: 'Username must be at least 3 characters and password at least 6 characters.',
+            creating: 'Creating your account...', fail: 'Registration failed: ', retry: 'Please try again later', network: 'Network error. Please make sure the server is running.'
+        }
+    };
+    function getCurrentLanguage() { return localStorage.getItem(LANG_KEY) || 'zh-CN'; }
+    function t(key) { return (I18N[getCurrentLanguage()] || I18N['zh-CN'])[key] || key; }
+    function refreshThemeButton() {
+        const isNight = (document.documentElement.getAttribute('data-theme') || 'night') === 'night';
+        document.getElementById('theme-btn').innerText = isNight ? t('themeToDay') : t('themeToNight');
+    }
+    function applyLanguage(lang) {
+        const nextLang = I18N[lang] ? lang : 'zh-CN';
+        localStorage.setItem(LANG_KEY, nextLang);
+        document.documentElement.lang = nextLang === 'en-US' ? 'en' : 'zh-CN';
+        document.title = t('title');
+        document.getElementById('form-kicker').innerText = t('kicker');
+        document.getElementById('form-title').innerText = t('formTitle');
+        document.getElementById('tip-user').innerText = t('tipUser');
+        document.getElementById('tip-pass').innerText = t('tipPass');
+        document.getElementById('username-label').innerText = t('username');
+        document.getElementById('password-label').innerText = t('password');
+        document.getElementById('username').placeholder = t('usernamePh');
+        document.getElementById('password').placeholder = t('passwordPh');
+        document.getElementById('submit-btn').innerText = t('submit');
+        document.getElementById('login-prefix').innerText = t('loginPrefix');
+        document.getElementById('login-link').innerText = t('loginLink');
+        document.getElementById('lang-btn').innerText = nextLang === 'en-US' ? '中文' : 'EN';
+        refreshThemeButton();
+    }
+    function toggleLanguage() { applyLanguage(getCurrentLanguage() === 'zh-CN' ? 'en-US' : 'zh-CN'); }
     function applyTheme(theme) {
         const nextTheme = theme === 'day' ? 'day' : 'night';
         document.documentElement.setAttribute('data-theme', nextTheme);
         localStorage.setItem('eq_theme', nextTheme);
-        document.getElementById('theme-btn').innerText = nextTheme === 'night' ? '切换到白天' : '切换到黑夜';
+        refreshThemeButton();
     }
     function toggleTheme() {
         const currentTheme = document.documentElement.getAttribute('data-theme') || 'night';
@@ -318,16 +368,16 @@
         const msgDiv = document.getElementById('message');
         if (!username || !password) {
             msgDiv.style.color = 'var(--danger)';
-            msgDiv.innerText = '用户名和密码不能为空';
+            msgDiv.innerText = t('empty');
             return;
         }
         if (username.length < 3 || password.length < 6) {
             msgDiv.style.color = 'var(--danger)';
-            msgDiv.innerText = '用户名至少 3 个字符，密码至少 6 个字符';
+            msgDiv.innerText = t('short');
             return;
         }
         msgDiv.style.color = 'var(--text-soft)';
-        msgDiv.innerText = '正在创建账号...';
+        msgDiv.innerText = t('creating');
         try {
             const res = await fetch('http://127.0.0.1:8000/api/auth/register', {
                 method: 'POST',
@@ -337,17 +387,18 @@
             const data = await res.json();
             if (res.ok && data.code === 200) {
                 msgDiv.style.color = 'var(--success)';
-                msgDiv.innerText = data.msg;
+                msgDiv.innerText = getCurrentLanguage() === 'en-US' ? 'Account created successfully. Redirecting to sign in...' : data.msg;
                 setTimeout(() => { window.location.href = 'login.html'; }, 1000);
             } else {
                 msgDiv.style.color = 'var(--danger)';
-                msgDiv.innerText = `注册失败：${data.detail || data.msg || '请稍后重试'}`;
+                msgDiv.innerText = `${t('fail')}${data.detail || data.msg || t('retry')}`;
             }
         } catch (e) {
             msgDiv.style.color = 'var(--danger)';
-            msgDiv.innerText = '网络连接失败，请检查服务是否启动';
+            msgDiv.innerText = t('network');
         }
     }
+    applyLanguage(getCurrentLanguage());
     applyTheme(localStorage.getItem('eq_theme') || 'night');
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') handleRegister();

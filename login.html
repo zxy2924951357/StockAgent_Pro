@@ -55,7 +55,8 @@
         }
         .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
         .logo { font-size: 24px; font-weight: 700; letter-spacing: 1px; }
-        .theme-btn { border: 1px solid var(--panel-border); background: transparent; color: var(--muted); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+        .toolbar-actions { display:flex; gap:10px; }
+        .theme-btn, .lang-btn { border: 1px solid var(--panel-border); background: transparent; color: var(--muted); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
         .desc { color: var(--muted); line-height: 1.7; font-size: 14px; margin-bottom: 24px; }
         .input-group { margin-bottom: 18px; }
         .input-group label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 14px; }
@@ -73,36 +74,88 @@
 <body>
 <div class="auth-box">
     <div class="top-row">
-        <div class="logo">量投终端</div>
-        <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">切换到白天</button>
+        <div class="logo" id="logo-text">量投终端</div>
+        <div class="toolbar-actions">
+            <button class="lang-btn" id="lang-btn" onclick="toggleLanguage()">EN</button>
+            <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">切换到白天</button>
+        </div>
     </div>
     
     <div class="input-group">
-        <label for="username">用户名</label>
+        <label for="username" id="username-label">用户名</label>
         <input type="text" id="username" placeholder="请输入用户名" autocomplete="off">
     </div>
     <div class="input-group">
-        <label for="password">密码</label>
+        <label for="password" id="password-label">密码</label>
         <input type="password" id="password" placeholder="请输入密码">
     </div>
     <div class="option-row">
         <label class="option-item">
             <input type="checkbox" id="remember-password">
-            <span>记住密码</span>
+            <span id="remember-label">记住密码</span>
         </label>
         <label class="option-item">
             <input type="checkbox" id="auto-login">
-            <span>自动登录</span>
+            <span id="autologin-label">自动登录</span>
         </label>
     </div>
-    <button class="btn" onclick="handleLogin()">立即登录</button>
-    <div class="link-text">还没有账号？<a href="register.html">去注册</a></div>
+    <button class="btn" id="login-btn" onclick="handleLogin()">立即登录</button>
+    <div class="link-text"><span id="link-prefix">还没有账号？</span><a href="register.html" id="register-link">去注册</a></div>
     <div id="message"></div>
 </div>
 <script>
     const API_BASE = 'http://127.0.0.1:8000';
     const AUTH_PREF_KEY = 'eq_auth_prefs';
     const SAVED_CRED_KEY = 'eq_saved_credentials';
+    const LANG_KEY = 'eq_lang';
+    const I18N = {
+        'zh-CN': {
+            title: '登录系统', logo: '量投终端', themeToDay: '切换到白天', themeToNight: '切换到黑夜',
+            username: '用户名', usernamePh: '请输入用户名', password: '密码', passwordPh: '请输入密码',
+            remember: '记住密码', autoLogin: '自动登录', login: '立即登录', noAccount: '还没有账号？', register: '去注册',
+            fillRequired: '请完整填写用户名和密码', verifying: '正在验证身份...', loginFailed: '登录失败：', retry: '请稍后重试',
+            networkError: '网络连接失败，请检查服务是否启动'
+        },
+        'en-US': {
+            title: 'Sign In', logo: 'Quant Terminal', themeToDay: 'Switch to Light', themeToNight: 'Switch to Dark',
+            username: 'Username', usernamePh: 'Enter username', password: 'Password', passwordPh: 'Enter password',
+            remember: 'Remember password', autoLogin: 'Auto login', login: 'Sign In', noAccount: 'No account yet? ', register: 'Create one',
+            fillRequired: 'Please enter both username and password.', verifying: 'Verifying your identity...', loginFailed: 'Login failed: ', retry: 'Please try again later',
+            networkError: 'Network error. Please make sure the server is running.'
+        }
+    };
+    function getCurrentLanguage() {
+        return localStorage.getItem(LANG_KEY) || 'zh-CN';
+    }
+    function applyLanguage(lang) {
+        const nextLang = I18N[lang] ? lang : 'zh-CN';
+        const dict = I18N[nextLang];
+        localStorage.setItem(LANG_KEY, nextLang);
+        document.documentElement.lang = nextLang === 'en-US' ? 'en' : 'zh-CN';
+        document.title = dict.title;
+        document.getElementById('logo-text').innerText = dict.logo;
+        document.getElementById('username-label').innerText = dict.username;
+        document.getElementById('password-label').innerText = dict.password;
+        document.getElementById('username').placeholder = dict.usernamePh;
+        document.getElementById('password').placeholder = dict.passwordPh;
+        document.getElementById('remember-label').innerText = dict.remember;
+        document.getElementById('autologin-label').innerText = dict.autoLogin;
+        document.getElementById('login-btn').innerText = dict.login;
+        document.getElementById('link-prefix').innerText = dict.noAccount;
+        document.getElementById('register-link').innerText = dict.register;
+        document.getElementById('lang-btn').innerText = nextLang === 'en-US' ? '中文' : 'EN';
+        refreshThemeButton();
+    }
+    function toggleLanguage() {
+        applyLanguage(getCurrentLanguage() === 'zh-CN' ? 'en-US' : 'zh-CN');
+    }
+    function t(key) {
+        return (I18N[getCurrentLanguage()] || I18N['zh-CN'])[key] || key;
+    }
+    function refreshThemeButton() {
+        const isNight = (document.documentElement.getAttribute('data-theme') || 'night') === 'night';
+        document.getElementById('theme-btn').innerText = isNight ? t('themeToDay') : t('themeToNight');
+    }
 
     function getAuthPrefs() {
         try {
@@ -152,7 +205,7 @@
         const nextTheme = theme === 'day' ? 'day' : 'night';
         document.documentElement.setAttribute('data-theme', nextTheme);
         localStorage.setItem('eq_theme', nextTheme);
-        document.getElementById('theme-btn').innerText = nextTheme === 'night' ? '切换到白天' : '切换到黑夜';
+        refreshThemeButton();
     }
     function toggleTheme() {
         const currentTheme = document.documentElement.getAttribute('data-theme') || 'night';
@@ -166,11 +219,11 @@
         const msgDiv = document.getElementById('message');
         if (!username || !password) {
             msgDiv.style.color = 'var(--danger)';
-            msgDiv.innerText = '请完整填写用户名和密码';
+            msgDiv.innerText = t('fillRequired');
             return;
         }
         msgDiv.style.color = 'var(--muted)';
-        msgDiv.innerText = '正在验证身份...';
+        msgDiv.innerText = t('verifying');
         try {
             const res = await fetch(`${API_BASE}/api/auth/login`, {
                 method: 'POST',
@@ -180,20 +233,21 @@
             const data = await res.json();
             if (res.ok && data.code === 200) {
                 msgDiv.style.color = 'var(--success)';
-                msgDiv.innerText = data.msg;
+                msgDiv.innerText = getCurrentLanguage() === 'en-US' ? 'Login successful.' : data.msg;
                 saveAuthPrefs(rememberPassword, autoLogin);
                 saveCredentialSnapshot(username, password, rememberPassword);
                 persistAuth(data.access_token, data.username, autoLogin);
                 setTimeout(() => { window.location.href = 'index.html'; }, 700);
             } else {
                 msgDiv.style.color = 'var(--danger)';
-                msgDiv.innerText = `登录失败：${data.detail || data.msg || '请稍后重试'}`;
+                msgDiv.innerText = `${t('loginFailed')}${data.detail || data.msg || t('retry')}`;
             }
         } catch (e) {
             msgDiv.style.color = 'var(--danger)';
-            msgDiv.innerText = '网络连接失败，请检查服务是否启动';
+            msgDiv.innerText = t('networkError');
         }
     }
+    applyLanguage(getCurrentLanguage());
     applyTheme(localStorage.getItem('eq_theme') || 'night');
     initLoginForm();
     document.addEventListener('keydown', (event) => {

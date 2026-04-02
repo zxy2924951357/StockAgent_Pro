@@ -11,6 +11,7 @@ from fastapi import APIRouter, Query, Depends, Header, HTTPException
 from pydantic import BaseModel
 from core.db_manager import mongo_manager
 from core.security import normalize_ts_code, sanitize_mongo_document, sanitize_stock_name, sanitize_text
+from core.ui_translation import translate_texts_to_english
 from core.stock_search import (
     build_stock_search_query,
     ensure_stock_search_fields,
@@ -105,6 +106,13 @@ def safe_float(val):
         return 0.0
 
 
+async def attach_name_en(items, field_name: str, domain: str):
+    names_en = await translate_texts_to_english([item.get(field_name, "") for item in items], domain=domain)
+    for item, value_en in zip(items, names_en):
+        item[f"{field_name}_en"] = value_en
+    return items
+
+
 def get_em_secid(ts_code: str) -> str:
     ts_code_upper = ts_code.upper()
     if ts_code_upper.endswith(".SH"):
@@ -131,6 +139,9 @@ async def search_stock(keyword: str = Query(...)):
     ).limit(30)
     stocks = await cursor.to_list(length=30)
     ranked = sorted(stocks, key=lambda item: score_stock_match(item, keyword), reverse=True)[:8]
+    translated_names = await translate_texts_to_english([item.get("name", "") for item in ranked], domain="stock_name")
+    for item, name_en in zip(ranked, translated_names):
+        item["name_en"] = name_en
     return {"code": 200, "data": ranked}
 
 
@@ -190,7 +201,7 @@ async def get_hotspots(limit: int = Query(24)):
     global _HOTSPOT_CACHE
     now = time.time()
     if _HOTSPOT_CACHE["data"] and (now - _HOTSPOT_CACHE["last_time"]) < HOTSPOT_TTL:
-        return {"code": 200, "data": _HOTSPOT_CACHE["data"]}
+        return {"code": 200, "data": await attach_name_en(await attach_name_en(_HOTSPOT_CACHE["data"], "sector_name", "sector_name"), "top_stock_name", "stock_name")}
 
     url = f"http://push2.eastmoney.com/api/qt/clist/get?pn=1&pz={limit}&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:2+f:!50&fields=f12,f14,f3,f128,f136"
 
@@ -216,14 +227,19 @@ async def get_hotspots(limit: int = Query(24)):
             "top_stock_name": item.get("f128", ""),
             "top_stock_change": safe_float(item.get("f136"))
         } for item in items]
+        await attach_name_en(result, "sector_name", "sector_name")
+        await attach_name_en(result, "top_stock_name", "stock_name")
 
         _HOTSPOT_CACHE["data"] = result
         _HOTSPOT_CACHE["last_time"] = now
         return {"code": 200, "data": result}
     except Exception:
         if _HOTSPOT_CACHE["data"]:
-            return {"code": 200, "data": _HOTSPOT_CACHE["data"]}
-        return {"code": 200, "data": get_fallback_data()}
+            return {"code": 200, "data": await attach_name_en(await attach_name_en(_HOTSPOT_CACHE["data"], "sector_name", "sector_name"), "top_stock_name", "stock_name")}
+        fallback_data = get_fallback_data()
+        await attach_name_en(fallback_data, "sector_name", "sector_name")
+        await attach_name_en(fallback_data, "top_stock_name", "stock_name")
+        return {"code": 200, "data": fallback_data}
 
 
 @router.get("/indices")
@@ -231,7 +247,7 @@ async def get_market_indices():
     global _INDICES_CACHE
     now = time.time()
     if _INDICES_CACHE["data"] and (now - _INDICES_CACHE["last_time"]) < 10:
-        return {"code": 200, "data": _INDICES_CACHE["data"]}
+        return {"code": 200, "data": await attach_name_en(_INDICES_CACHE["data"], "name", "index_name")}
     url = "http://push2.eastmoney.com/api/qt/ulist.np/get?secids=1.000001,0.399001,0.399006&fields=f14,f2,f3&fltt=2"
     try:
         data = await fetch_json_with_retry(url, timeout=4.0)
@@ -241,12 +257,13 @@ async def get_market_indices():
                 {"name": i.get("f14", ""), "price": safe_float(i.get("f2")), "change_pct": safe_float(i.get("f3"))}
                 for i in items
             ]
+            await attach_name_en(result, "name", "index_name")
             _INDICES_CACHE["data"] = result
             _INDICES_CACHE["last_time"] = now
             return {"code": 200, "data": result}
     except Exception:
         pass
-    return {"code": 200, "data": _INDICES_CACHE["data"]}
+    return {"code": 200, "data": await attach_name_en(_INDICES_CACHE["data"], "name", "index_name")}
 
 
 @router.post("/watchlist/add")
@@ -281,6 +298,9 @@ async def get_watchlist(current_user: str = Depends(get_current_user)):
         {"user_id": current_user},
         {"_id": 0, "user_id": 0, "updated_at": 0}
     ).to_list(length=100)
+    translated_names = await translate_texts_to_english([item.get("stock_name", "") for item in data], domain="stock_name")
+    for item, stock_name_en in zip(data, translated_names):
+        item["stock_name_en"] = stock_name_en
     return {"code": 200, "data": data}
 
 
